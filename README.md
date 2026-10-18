@@ -1,0 +1,140 @@
+<p align="center"><img src="icon/icon-1024.png" width="112" alt="Steamcup"></p>
+
+<h1 align="center">Steamcup</h1>
+<p align="center"><strong>A pixel coffee cup in your menu bar that keeps your Mac awake, even with the lid closed.</strong></p>
+<p align="center">For long builds, downloads and agent runs you want to leave running while you close the laptop and walk away.</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue" alt="MIT"></a>
+  <img src="https://img.shields.io/badge/tested%20on-macOS%2026-black" alt="tested on macOS 26">
+  <img src="https://img.shields.io/badge/Swift-6-orange" alt="Swift 6">
+  <img src="https://img.shields.io/badge/status-Alpha-orange" alt="Alpha">
+</p>
+
+<p align="center">
+  <a href="README.zh-CN.md">中文</a> ·
+  <a href="docs/media/steamcup-intro.mp4">Intro video (12 s)</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#build-with-us">Build with us</a>
+</p>
+
+<p align="center"><img src="docs/media/steamcup-hero.gif" width="960" alt="Steamcup: keeps your Mac awake, even with the lid closed. Feature illustration."></p>
+
+Most keep-awake apps stop at "don't idle-sleep", so the Mac still sleeps the moment you close the lid. **Steamcup keeps it running with the lid shut, and always switches that back off.**
+
+**One click to turn it on. One password prompt to set up lid mode. Switches itself off when the Mac gets hot or the battery runs low.**
+
+## What it is
+
+A native macOS menu bar app of about 400 lines of Swift, with no dependencies. Click the cup and your Mac stays awake: the cup fills and steams. Click again and it sleeps as usual. Right-click for timers and options.
+
+Closing the lid puts a MacBook to sleep whatever apps ask. The only way around that is a system-wide switch, `pmset disablesleep`, which needs admin rights. Steamcup flips that switch only while it is on. It flips it back when:
+- you turn it off, a timer ends, or you quit
+- the Mac gets too hot or the battery drops to 10%
+- it next starts, if it was force-quit while on
+
+> **Early version.** Tested by hand on one Apple Silicon MacBook running macOS 26: on/off, timers, lid mode on and off, quit and forced quit, screen-lock pause. Not yet tested: macOS 14–15, Intel Macs, the heat and low-battery notifications firing for real. See [Known issues](#known-issues).
+
+## How it works
+
+| You… | Steamcup… |
+| --- | --- |
+| click the cup | keeps the Mac and screen awake (a power assertion, like `caffeinate -d`); click again to stop |
+| right-click → For 30 minutes … 4 hours | shows the time left beside the cup (`0:30`) and stops by itself at the end, even across sleep |
+| tick **Keep Awake with Lid Closed** | the first time, asks for your admin password once; then the cup shows a padlock while on, and the lid no longer sleeps the Mac |
+| close the lid on a hot Mac, or on battery at 10% | stops lid mode within 15 seconds and posts a notification |
+| tick **Let the Screen Turn Off** | lets the display sleep while the Mac keeps running |
+| tick **Sleep When Screen Locks** | lets go when you lock the screen, and picks up again on unlock with the same end time |
+| press **⌃⌥W** anywhere | toggles, handy when the notch hides the cup |
+
+## Try these
+
+- Click the cup, then run `pmset -g assertions | grep Steamcup` in Terminal → you see `Steamcup is on`. Click again → it's gone.
+- Right-click → **For 30 minutes** → `0:30` appears beside the cup and counts down.
+- Tick **Keep Awake with Lid Closed**, click the cup, run `pmset -g | grep SleepDisabled` → `SleepDisabled 1`. Click the cup off → the line is gone.
+- With lid mode on, start some music and close the lid for 30 seconds → the music keeps playing.
+
+## Is it safe?
+
+- **What the admin step allows:** it adds one file, `/etc/sudoers.d/steamcup`, that lets your user run exactly two commands without a password: `pmset -a disablesleep 1` and `pmset -a disablesleep 0`. Nothing else. The rule is checked with `visudo` before it is installed. Read [setup-lid-mode.sh](setup-lid-mode.sh), all 23 lines.
+- **Heat:** a closed MacBook in a bag can get hot. Steamcup checks every 15 seconds while lid mode is on, and stops if macOS reports the Mac as seriously hot.
+- **Force-quit:** if Steamcup is killed with the lid closed, the Mac stays awake until Steamcup starts again. Turning on lid mode also turns on Open at Login, so this is fixed at your next login at the latest.
+- **Undo everything:** `sudo pmset -a disablesleep 0 && sudo rm /etc/sudoers.d/steamcup`.
+- **Network:** Steamcup makes no network requests.
+
+## Compared with
+
+| | Steamcup | [KeepingYouAwake](https://github.com/newmarcel/KeepingYouAwake) | [Amphetamine](https://apps.apple.com/us/app/amphetamine/id937984704?mt=12) |
+| --- | --- | --- | --- |
+| Price / source | Free, MIT | Free, MIT | Free, closed source |
+| Lid closed | Yes, one password prompt | No ([#258](https://github.com/newmarcel/KeepingYouAwake/issues/258), [#262](https://github.com/newmarcel/KeepingYouAwake/issues/262)) | Yes; on Apple Silicon needs the separate Power Protect add-on |
+| Sleep when screen locks | Yes | No ([#98](https://github.com/newmarcel/KeepingYouAwake/issues/98)) | Has screen-lock options |
+| Time left beside the icon | Yes | No ([#154](https://github.com/newmarcel/KeepingYouAwake/issues/154)) | Not that we found |
+| Global hotkey | ⌃⌥W | No | Yes |
+
+## Quick start
+
+### Option A: let your AI install it
+
+Paste this into Claude Code or Codex:
+
+```text
+Install Steamcup for me from https://github.com/Longado/steamcup.
+1. Read its README first.
+2. Check `xcode-select -p` works and macOS is 14 or later.
+3. Clone it, run ./build.sh, and move Steamcup.app to /Applications.
+4. Open it. If macOS says it can't verify the developer, tell me to open
+   System Settings → Privacy & Security and click "Open Anyway".
+5. Tell me to click the cup in the menu bar to try it, and that lid mode
+   asks for my admin password once when I first tick it.
+```
+
+### Option B: build it yourself
+
+Needs the Xcode command-line tools (`xcode-select --install`) and macOS 14 or later.
+
+```sh
+git clone https://github.com/Longado/steamcup
+cd steamcup
+./build.sh
+mv Steamcup.app /Applications/
+open /Applications/Steamcup.app
+```
+
+The app is not notarized yet. If you download a release instead of building it, macOS will block the first open: go to **System Settings → Privacy & Security** and click **Open Anyway** ([Apple's guide](https://support.apple.com/en-us/102445)).
+
+## Known issues
+
+- Clicking the Dock icon no longer toggles, because macOS reports a Dock click and a re-open from Finder or Spotlight the same way. Use the cup, ⌃⌥W, or the Dock icon's right-click menu.
+- While the admin password prompt is open, the menu bar cup does not respond.
+- After a force-quit with the lid closed, recovery waits until Steamcup starts again (see [Is it safe?](#is-it-safe)).
+- The heat and low-battery stops are tested as logic; neither has been seen firing on a real hot or drained Mac yet.
+
+## Build with us
+
+**Can a keep-awake app be trusted with the lid closed?** Steamcup tries to answer that with a tiny, readable codebase and hard safety stops.
+
+| If you like… | You could… |
+| --- | --- |
+| testing on other Macs | try macOS 14–15 or an Intel MacBook and report what happens |
+| macOS internals | find a way to restore lid sleep after a force-quit without a background helper |
+| scripting | add an `steamcup://on?minutes=120` URL scheme for Shortcuts and scripts |
+| pixel art | improve the 18 px menu bar icons in `icon/make_menubar.py` |
+| writing | translate the few menu strings |
+
+Issues and pull requests are welcome.
+
+## Development
+
+```sh
+./build.sh                                   # builds Steamcup.app in a few seconds, ad-hoc signed
+swiftc Rules.swift tests/main.swift -o /tmp/steamcup-tests && /tmp/steamcup-tests
+python3 icon/make_icon.py                    # app icon
+python3 icon/make_menubar.py                 # menu bar icons (off / on / lid)
+```
+
+`main.swift` is the menu bar app, `Power.swift` holds the power assertion, the lid-sleep switch and the battery reading, and `Rules.swift` holds the pure decisions the tests check.
+
+## License
+
+[MIT](LICENSE) © Yutai Lin
