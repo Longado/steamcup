@@ -225,7 +225,8 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         if SMAppService.mainApp.status != .enabled {
             do { try SMAppService.mainApp.register() } catch { NSLog("Steamcup: Open at Login failed: \(error)") }
         }
-        if on && !lidActive { beginLidSession() }
+        // Ticking it means "keep my Mac running with the lid shut": turn on right away, not on the next cup click.
+        if !on { start(for: nil) } else if !lidActive { beginLidSession() }
         refresh()
     }
 
