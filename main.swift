@@ -53,6 +53,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     @objc func startTimed(_ sender: NSMenuItem) { start(for: sender.tag == 0 ? nil : sender.tag) }
 
     func start(for seconds: Int?) {
+        pausedByLock = nil
         notice = nil
         if !on {
             assertion = Assertion.hold(screenMayTurnOff: screenMayTurnOff)
@@ -70,12 +71,13 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     }
 
     @objc func stop() {
-        ticker?.invalidate()
-        ticker = nil
+        pausedByLock = nil
         duration = nil
         until = nil
         if let a = assertion { Assertion.release(a); assertion = nil }
         endLidSession()
+        // If switching lid sleep back on failed, keep ticking: tick() retries every 15 s until it succeeds.
+        if !lidActive { ticker?.invalidate(); ticker = nil }
         refresh()
     }
 
@@ -98,13 +100,16 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     }
 
     func tick() {
+        if !on { return stop() }   // only while retrying a failed lid switch-back
         if let u = until, u <= Date() { return stop() }
         if lidActive {
             let b = Battery.read()
             if let why = lidSafety(thermal: ProcessInfo.processInfo.thermalState, onBattery: b.onBattery, percent: b.percent) {
                 endLidSession()
-                notice = notice ?? "Lid-closed mode paused: \(why.rawValue)"
-                notify("Steamcup turned off lid-closed mode: \(why.rawValue)")
+                if !lidActive {
+                    notice = notice ?? "Lid-closed mode paused: \(why.rawValue)"
+                    notify("Steamcup turned off lid-closed mode: \(why.rawValue)")
+                }
             }
         }
         refresh()
@@ -124,8 +129,9 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
 
     @objc func screenLocked() {
         guard sleepOnLock, on else { return }
-        pausedByLock = (until, duration)
-        stop()
+        let p = (until, duration)
+        stop()               // clears pausedByLock, so set it after
+        pausedByLock = p
     }
 
     @objc func screenUnlocked() {
@@ -145,24 +151,36 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         if lidMode && ready {
             lidMode = false
             endLidSession()
-        } else if ready || installLidSetup() {
+        } else if ready {
             enableLidMode()
+        } else {
+            installLidSetup()
         }
         refresh()
     }
 
     // The one admin prompt. Cancel does nothing; any other failure is explained in plain words.
-    func installLidSetup() -> Bool {
-        switch LidSleep.install() {
-        case .done: return true
-        case .cancelled: return false
-        case .failed(let why):
-            let a = NSAlert()
-            a.messageText = "Couldn't set up lid-closed mode"
-            a.informativeText = "\(why)\n\nYou can also run this in Terminal and enter your password:\nsudo zsh \(shellQuote(LidSleep.scriptPath))"
-            NSApp.activate(ignoringOtherApps: true)
-            a.runModal()
-            return false
+    // Runs in the background so the cup keeps working while the password prompt is up.
+    var installing = false
+    func installLidSetup() {
+        guard !installing else { return }
+        installing = true
+        DispatchQueue.global(qos: .userInitiated).async {
+            let result = LidSleep.install()
+            DispatchQueue.main.async { [self] in
+                installing = false
+                switch result {
+                case .done: enableLidMode()
+                case .cancelled: break
+                case .failed(let why):
+                    let a = NSAlert()
+                    a.messageText = "Couldn't set up lid-closed mode"
+                    a.informativeText = "\(why)\n\nYou can also run this in Terminal and enter your password:\nsudo zsh \(shellQuote(LidSleep.scriptPath))"
+                    NSApp.activate(ignoringOtherApps: true)
+                    a.runModal()
+                }
+                refresh()
+            }
         }
     }
 

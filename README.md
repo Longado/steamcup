@@ -33,7 +33,7 @@ Closing the lid puts a MacBook to sleep whatever apps ask. The only way around t
 - the Mac gets too hot or the battery drops to 10%
 - it next starts, if it was force-quit while on
 
-> **Early version.** Tested by hand on one Apple Silicon MacBook running macOS 26: on/off, timers, lid mode on and off, quit and forced quit, screen-lock pause. Not yet tested: macOS 14–15, Intel Macs, the heat and low-battery notifications firing for real. See [Known issues](#known-issues).
+> **Early version.** Tested by hand on one Apple Silicon MacBook running macOS 26 (the download also runs on Intel Macs and macOS 14+, but nobody has tried those yet): on/off, timers, lid mode on and off, quit and forced quit, screen-lock pause. Not yet tested: macOS 14–15, Intel Macs, the heat and low-battery notifications firing for real. See [Known issues](#known-issues).
 
 ## How it works
 
@@ -56,7 +56,7 @@ Closing the lid puts a MacBook to sleep whatever apps ask. The only way around t
 
 ## Is it safe?
 
-- **What the admin step allows:** it adds one file, `/etc/sudoers.d/steamcup`, that lets your user run exactly two commands without a password: `pmset -a disablesleep 1` and `pmset -a disablesleep 0`. Nothing else. The rule is checked with `visudo` before it is installed. Read [setup-lid-mode.sh](setup-lid-mode.sh), all 23 lines.
+- **What the admin step allows:** it adds one file, `/etc/sudoers.d/steamcup`, that lets your user run exactly two commands without a password: `pmset -a disablesleep 1` and `pmset -a disablesleep 0`. Nothing else. The rule is checked with `visudo` before it is installed. Read [setup-lid-mode.sh](setup-lid-mode.sh), all 24 lines.
 - **Heat:** a closed MacBook in a bag can get hot. Steamcup checks every 15 seconds while lid mode is on, and stops if macOS reports the Mac as seriously hot.
 - **Force-quit:** if Steamcup is killed with the lid closed, the Mac stays awake until Steamcup starts again. Turning on lid mode also turns on Open at Login, so this is fixed at your next login at the latest.
 - **Undo everything:** `sudo pmset -a disablesleep 0 && sudo rm /etc/sudoers.d/steamcup`.
@@ -106,7 +106,6 @@ The app is not notarized yet. If you download a release instead of building it, 
 ## Known issues
 
 - Clicking the Dock icon no longer toggles, because macOS reports a Dock click and a re-open from Finder or Spotlight the same way. Use the cup, ⌃⌥W, or the Dock icon's right-click menu.
-- While the admin password prompt is open, the menu bar cup does not respond.
 - After a force-quit with the lid closed, recovery waits until Steamcup starts again (see [Is it safe?](#is-it-safe)).
 - The heat and low-battery stops are tested as logic; neither has been seen firing on a real hot or drained Mac yet.
 
@@ -127,7 +126,8 @@ Issues and pull requests are welcome.
 ## Development
 
 ```sh
-./build.sh                                   # builds Steamcup.app in a few seconds, ad-hoc signed
+./build.sh                                   # builds Steamcup.app (Apple Silicon + Intel, macOS 14+), ad-hoc signed
+ditto -c -k --norsrc --noextattr --keepParent Steamcup.app Steamcup.zip   # release zip
 swiftc Rules.swift tests/main.swift -o /tmp/steamcup-tests && /tmp/steamcup-tests
 python3 icon/make_icon.py                    # app icon
 python3 icon/make_menubar.py                 # menu bar icons (off / on / lid)

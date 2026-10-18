@@ -25,15 +25,11 @@ enum LidSleep {
     enum Install { case done, cancelled, failed(String) }
 
     // One admin password prompt: runs the bundled setup script as root. It gets no SUDO_USER here, so we pass the user name.
-    // Blocks while the prompt is up (ponytail: background queue if the frozen menu bar ever bothers anyone).
+    // Blocks until the prompt is answered, so call it off the main thread (osascript, since NSAppleScript is main-thread only).
     static func install() -> Install {
         let cmd = "/bin/zsh \(shellQuote(scriptPath)) \(shellQuote(NSUserName()))"
-        var err: NSDictionary?
-        NSAppleScript(source: "do shell script \(appleScriptLiteral(cmd)) with administrator privileges")?.executeAndReturnError(&err)
-        if let e = err {
-            if e[NSAppleScript.errorNumber] as? Int == -128 { return .cancelled }   // user pressed Cancel
-            return .failed(e[NSAppleScript.errorMessage] as? String ?? "Unknown error")
-        }
+        let r = run("/usr/bin/osascript", ["-e", "do shell script \(appleScriptLiteral(cmd)) with administrator privileges"], timeout: nil)
+        if !r.ok { return r.out.contains("(-128)") ? .cancelled : .failed(r.out.trimmingCharacters(in: .whitespacesAndNewlines)) }
         return setupDone ? .done : .failed("The permission was not installed.")
     }
 
@@ -44,7 +40,7 @@ enum LidSleep {
         return r.ok
     }
 
-    private static func run(_ path: String, _ args: [String]) -> (ok: Bool, out: String) {
+    private static func run(_ path: String, _ args: [String], timeout: Double? = 5) -> (ok: Bool, out: String) {
         let p = Process()
         let pipe = Pipe()
         p.executableURL = URL(fileURLWithPath: path)
@@ -53,8 +49,8 @@ enum LidSleep {
         p.standardOutput = pipe
         p.standardError = pipe
         do { try p.run() } catch { return (false, "\(error)") }
-        // Runs on the main thread: never let a stuck sudo/pmset freeze the menu bar.
-        DispatchQueue.global().asyncAfter(deadline: .now() + 5) { if p.isRunning { p.terminate() } }
+        // Most calls run on the main thread: never let a stuck sudo/pmset freeze the menu bar.
+        if let t = timeout { DispatchQueue.global().asyncAfter(deadline: .now() + t) { if p.isRunning { p.terminate() } } }
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         p.waitUntilExit()
         return (p.terminationStatus == 0, String(decoding: data, as: UTF8.self))

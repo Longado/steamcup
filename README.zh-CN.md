@@ -33,7 +33,7 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 - Mac 过热,或电量降到 10%
 - 它被强制退出过,下次启动时
 
-> **早期版本。** 在一台装 macOS 26 的 Apple 芯片 MacBook 上手动测过:开关、定时、合盖模式开和关、正常退出和强制退出、锁屏暂停。还没测:macOS 14–15、Intel Mac、过热和低电量通知真的弹出来。见[已知问题](#已知问题)。
+> **早期版本。** 在一台装 macOS 26 的 Apple 芯片 MacBook 上手动测过(下载包也能在 Intel Mac 和 macOS 14 以上运行,但还没人试过):开关、定时、合盖模式开和关、正常退出和强制退出、锁屏暂停。还没测:macOS 14–15、Intel Mac、过热和低电量通知真的弹出来。见[已知问题](#已知问题)。
 
 ## 怎么用
 
@@ -56,7 +56,7 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 
 ## 安全吗
 
-- **管理员那一步允许什么:** 只加一个文件 `/etc/sudoers.d/steamcup`,让你的用户不输密码就能跑两条命令:`pmset -a disablesleep 1` 和 `pmset -a disablesleep 0`,别的都不行。装之前先用 `visudo` 检查过规则。可以读 [setup-lid-mode.sh](setup-lid-mode.sh),一共 23 行。
+- **管理员那一步允许什么:** 只加一个文件 `/etc/sudoers.d/steamcup`,让你的用户不输密码就能跑两条命令:`pmset -a disablesleep 1` 和 `pmset -a disablesleep 0`,别的都不行。装之前先用 `visudo` 检查过规则。可以读 [setup-lid-mode.sh](setup-lid-mode.sh),一共 24 行。
 - **发热:** 合着盖子放在包里的 MacBook 会热。合盖模式开着时 Steamcup 每 15 秒查一次,macOS 报告严重过热就停。
 - **强制退出:** 合盖时 Steamcup 被强行杀掉,Mac 会一直醒着,直到 Steamcup 再次启动。打开合盖模式时会顺带打开登录时启动,所以最迟下次登录就会恢复。
 - **全部撤销:** `sudo pmset -a disablesleep 0 && sudo rm /etc/sudoers.d/steamcup`。
@@ -105,7 +105,6 @@ open /Applications/Steamcup.app
 ## 已知问题
 
 - 点 Dock 图标不再开关:macOS 分不清「点 Dock」和「从访达或聚焦再次打开」。请用杯子、⌃⌥W 或 Dock 图标的右键菜单。
-- 管理员密码框开着的时候,菜单栏的杯子点不动。
 - 合盖时被强制退出,要等 Steamcup 下次启动才恢复(见[安全吗](#安全吗))。
 - 过热和低电量停止只测了判断逻辑,还没在真的很热或快没电的 Mac 上看到它触发。
 
@@ -126,7 +125,8 @@ open /Applications/Steamcup.app
 ## 开发
 
 ```sh
-./build.sh                                   # 几秒编出 Steamcup.app,ad-hoc 签名
+./build.sh                                   # 编出 Steamcup.app(Apple 芯片和 Intel 通用,macOS 14 起),ad-hoc 签名
+ditto -c -k --norsrc --noextattr --keepParent Steamcup.app Steamcup.zip   # 发布用压缩包
 swiftc Rules.swift tests/main.swift -o /tmp/steamcup-tests && /tmp/steamcup-tests
 python3 icon/make_icon.py                    # 应用图标
 python3 icon/make_menubar.py                 # 菜单栏图标(关 / 开 / 合盖)

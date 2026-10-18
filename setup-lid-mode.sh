@@ -10,7 +10,8 @@ export PATH=/usr/bin:/bin:/usr/sbin:/sbin   # runs as root: only system tools, n
 umask 077
 [[ $EUID -eq 0 ]] || { echo "Run with sudo:  sudo zsh $0"; exit 1; }
 U=${SUDO_USER:-${1:-}}
-[[ $U =~ '^[A-Za-z0-9._-]+$' && $U != root ]] && id -u "$U" >/dev/null 2>&1 \
+# Must be a real login account (uid 500–99999), not root, a system account or "nobody".
+[[ $U =~ '^[A-Za-z0-9._-]+$' ]] && UID_=$(id -u -- "$U" 2>/dev/null || echo 0) && (( UID_ >= 500 && UID_ < 100000 )) \
   || { echo "Run with sudo from your own account, or pass your user name:  sudo zsh $0 <user>"; exit 1; }
 # Built inside the root-only folder (sudo ignores names starting with "."), checked, then renamed into place in one step.
 TMP=$(mktemp /etc/sudoers.d/.steamcup.XXXXXX)

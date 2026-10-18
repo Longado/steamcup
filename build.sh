@@ -15,11 +15,18 @@ cat > $APP/Contents/Info.plist <<'PL'
 <key>CFBundleName</key><string>Steamcup</string>
 <key>CFBundleExecutable</key><string>Steamcup</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>1.0</string>
+<key>CFBundleShortVersionString</key><string>1.0.1</string>
+<key>CFBundleVersion</key><string>2</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 </dict></plist>
 PL
-swiftc -O -framework Cocoa -framework UserNotifications -framework Carbon -framework IOKit -framework ServiceManagement Rules.swift Power.swift main.swift -o $APP/Contents/MacOS/Steamcup
+# One binary for Apple Silicon and Intel, runnable from macOS 14 (swiftc otherwise targets only this Mac's chip and OS).
+for arch in arm64 x86_64; do
+  swiftc -O -target $arch-apple-macos14.0 -framework Cocoa -framework UserNotifications -framework Carbon -framework IOKit -framework ServiceManagement \
+    Rules.swift Power.swift main.swift -o .build-$arch
+done
+lipo -create .build-arm64 .build-x86_64 -output $APP/Contents/MacOS/Steamcup
+rm -f .build-arm64 .build-x86_64
 codesign -s - --force --options runtime $APP
 echo "built $APP"
