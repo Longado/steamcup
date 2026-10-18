@@ -23,4 +23,13 @@ assert(shellQuote("/a b/c.sh") == "'/a b/c.sh'")
 assert(shellQuote("it's") == "'it'\\''s'")
 assert(appleScriptLiteral("a\"b\\c") == "\"a\\\"b\\\\c\"")
 
+assert(remoteCommand("steamcup://on") == .on(minutes: nil))
+assert(remoteCommand("steamcup://off") == .off)
+assert(remoteCommand("steamcup://on?minutes=90") == .on(minutes: 90))
+assert(remoteCommand("STEAMCUP://On?minutes=1") == .on(minutes: 1))
+for bad in ["steamcup://on?minutes=0", "steamcup://on?minutes=-5", "steamcup://on?minutes=abc", "steamcup://on?minutes=", "steamcup://on?minutes=10081",
+            "steamcup://on?hours=2", "steamcup://on?minutes=5&lid=1", "steamcup://toggle", "other://on", "steamcup://"] {
+    assert(remoteCommand(bad) == nil, bad)
+}
+
 print("all rules ok")
