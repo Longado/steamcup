@@ -20,7 +20,7 @@
 
 <p align="center"><img src="docs/media/steamcup-hero.gif" width="960" alt="Steamcup: keeps your Mac awake, even with the lid closed. Feature illustration."></p>
 
-Most keep-awake apps stop at "don't idle-sleep", so the Mac still sleeps the moment you close the lid. **Steamcup keeps it running with the lid shut, and always switches that back off.**
+Most keep-awake apps stop at "don't idle-sleep", so the Mac still sleeps the moment you close the lid. **Steamcup keeps it running with the lid shut. It switches that back off whenever it can, and on its next launch otherwise.**
 
 **One click to turn it on. One password prompt to set up lid mode. Switches itself off when the Mac gets hot or the battery runs low.**
 
@@ -40,12 +40,13 @@ Closing the lid puts a MacBook to sleep whatever apps ask. The only way around t
 | You… | Steamcup… |
 | --- | --- |
 | click the cup | keeps the Mac and screen awake (a power assertion, like `caffeinate -d`); click again to stop |
-| right-click → For 30 minutes … 4 hours | shows the time left beside the cup (`0:30`) and stops by itself at the end, even across sleep |
+| right-click → For 30 minutes … 8 hours | shows the time left beside the cup (`0:30`) and stops by itself at the end, even across sleep |
 | tick **Keep Awake with Lid Closed** | the first time, asks for your admin password once; then the cup shows a padlock while on, and the lid no longer sleeps the Mac |
 | close the lid on a hot Mac, or on battery at 10% | stops lid mode within 15 seconds and posts a notification |
 | tick **Let the Screen Turn Off** | lets the display sleep while the Mac keeps running |
 | tick **Sleep When Screen Locks** | lets go when you lock the screen, and picks up again on unlock with the same end time |
 | press **⌃⌥W** anywhere | toggles, handy when the notch hides the cup |
+| run `open -g 'steamcup://on?minutes=120'` from a script or Shortcut | turns on for 2 hours (`steamcup://on` until off, `steamcup://off` to stop); uses lid mode if you ticked it |
 
 ## Try these
 
@@ -57,9 +58,17 @@ Closing the lid puts a MacBook to sleep whatever apps ask. The only way around t
 ## Is it safe?
 
 - **What the admin step allows:** it adds one file, `/etc/sudoers.d/steamcup`, that lets your user run exactly two commands without a password: `pmset -a disablesleep 1` and `pmset -a disablesleep 0`. Nothing else. The rule is checked with `visudo` before it is installed. Read [setup-lid-mode.sh](setup-lid-mode.sh), all 24 lines.
-- **Heat:** a closed MacBook in a bag can get hot. Steamcup checks every 15 seconds while lid mode is on, and stops if macOS reports the Mac as seriously hot.
-- **Force-quit:** if Steamcup is killed with the lid closed, the Mac stays awake until Steamcup starts again. Turning on lid mode also turns on Open at Login, so this is fixed at your next login at the latest.
-- **Undo everything:** `sudo pmset -a disablesleep 0 && sudo rm /etc/sudoers.d/steamcup`.
+- **What the prompt runs:** the copy of `setup-lid-mode.sh` inside the app. To check it matches the one on GitHub: `diff /Applications/Steamcup.app/Contents/Resources/setup-lid-mode.sh <(curl -s https://raw.githubusercontent.com/Longado/steamcup/main/setup-lid-mode.sh)` prints nothing when they are the same.
+- **Who can use those two commands:** any program run as your user can use them without a password, not only Steamcup.
+- **At launch:** if Steamcup finds lid sleep switched off, it switches it back on, whoever turned it off.
+- **Heat and battery:** a closed MacBook in a bag can get hot. Steamcup checks every 15 seconds while lid mode is on, and stops if macOS reports the Mac as seriously hot or the battery drops to 10%. Not yet seen on real hardware.
+- **Force-quit:** if Steamcup is killed with the lid closed, the Mac stays awake until Steamcup starts again. Turning on lid mode also turns on Open at Login, so this is fixed at your next login at the latest. Crash recovery needs Open at Login on.
+- **Remove everything:**
+  1. Quit Steamcup.
+  2. Untick **Open at Login**.
+  3. `sudo pmset -a disablesleep 0 && sudo rm /etc/sudoers.d/steamcup`
+  4. `defaults delete com.longado.steamcup`
+  5. Delete the app.
 - **Network:** Steamcup makes no network requests.
 
 ## Compared with
@@ -74,7 +83,21 @@ Closing the lid puts a MacBook to sleep whatever apps ask. The only way around t
 
 ## Quick start
 
-### Option A: let your AI install it
+### Option A: download
+
+1. Download [Steamcup.zip](https://github.com/Longado/steamcup/releases/latest/download/Steamcup.zip) from the [latest release](https://github.com/Longado/steamcup/releases/latest) and unzip it.
+2. Drag `Steamcup.app` to your Applications folder.
+3. Double-click it. The cup appears at the top right of the menu bar: click it to turn on or off, right-click or Control-click it for timers. If the notch hides it, press ⌃⌥W.
+
+The app is not notarized yet, so macOS blocks the first open (on macOS 15 and later the old right-click → Open shortcut no longer works). To get past it:
+
+1. Double-click Steamcup and click **Done**, not **Move to Trash**.
+2. Open **System Settings → Privacy & Security** and click **Open Anyway** ([Apple's guide](https://support.apple.com/en-us/102445)).
+3. Confirm with your password.
+
+The Open Anyway button only shows for about an hour after step 1.
+
+### Option B: let your AI install it
 
 Paste this into Claude Code or Codex:
 
@@ -89,7 +112,7 @@ Install Steamcup for me from https://github.com/Longado/steamcup.
    asks for my admin password once when I first tick it.
 ```
 
-### Option B: build it yourself
+### Option C: build it yourself
 
 Needs the Xcode command-line tools (`xcode-select --install`) and macOS 14 or later.
 
@@ -100,8 +123,6 @@ cd steamcup
 mv Steamcup.app /Applications/
 open /Applications/Steamcup.app
 ```
-
-The app is not notarized yet. If you download a release instead of building it, macOS will block the first open: go to **System Settings → Privacy & Security** and click **Open Anyway** ([Apple's guide](https://support.apple.com/en-us/102445)).
 
 ## Known issues
 
@@ -117,7 +138,7 @@ The app is not notarized yet. If you download a release instead of building it, 
 | --- | --- |
 | testing on other Macs | try macOS 14–15 or an Intel MacBook and report what happens |
 | macOS internals | find a way to restore lid sleep after a force-quit without a background helper |
-| scripting | add an `steamcup://on?minutes=120` URL scheme for Shortcuts and scripts |
+| scripting | build on the `steamcup://` URL scheme (`on`, `off`, `on?minutes=N`), e.g. `open 'steamcup://on?minutes=120'` from Shortcuts or a script |
 | pixel art | improve the 18 px menu bar icons in `icon/make_menubar.py` |
 | writing | translate the few menu strings |
 

@@ -20,7 +20,7 @@
 
 <p align="center"><img src="docs/media/steamcup-hero.gif" width="960" alt="Steamcup:让 Mac 不睡,合上盖子也不睡。功能示意图。"></p>
 
-大多数防睡眠工具只管「闲着别睡」,一合盖 Mac 照样睡。**Steamcup 合上盖子也能接着跑,而且一定会把它改回来。**
+大多数防睡眠工具只管「闲着别睡」,一合盖 Mac 照样睡。**Steamcup 合上盖子也能接着跑。它会尽可能把这个开关改回来,做不到的话,下次启动时再改。**
 
 **点一下就开。合盖模式只输一次密码。Mac 过热或电量低,它自己停。**
 
@@ -40,12 +40,13 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 | 你…… | Steamcup 会…… |
 | --- | --- |
 | 点杯子 | 让 Mac 和屏幕都不睡(电源断言,和 `caffeinate -d` 一样);再点一下停 |
-| 右键 → For 30 minutes … 4 hours | 在杯子旁显示剩余时间(`0:30`),到点自己停,中间睡过也照样准 |
+| 右键 → For 30 minutes … 8 hours | 在杯子旁显示剩余时间(`0:30`),到点自己停,中间睡过也照样准 |
 | 勾上 **Keep Awake with Lid Closed** | 第一次会要一次管理员密码;之后开着时杯子上有把小锁,合盖不再让 Mac 睡 |
 | Mac 太热时合盖,或用电池到 10% | 15 秒内停掉合盖模式,并弹一条通知 |
 | 勾上 **Let the Screen Turn Off** | 屏幕可以熄,Mac 接着跑 |
 | 勾上 **Sleep When Screen Locks** | 锁屏时松手,解锁后按原来的结束时间接着来 |
 | 任何地方按 **⌃⌥W** | 开或关,刘海挡住杯子时用得上 |
+| 在脚本或快捷指令里跑 `open -g 'steamcup://on?minutes=120'` | 开 2 小时(`steamcup://on` 一直开,`steamcup://off` 关);勾了合盖模式就带合盖模式 |
 
 ## 可以试试这些
 
@@ -57,9 +58,17 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 ## 安全吗
 
 - **管理员那一步允许什么:** 只加一个文件 `/etc/sudoers.d/steamcup`,让你的用户不输密码就能跑两条命令:`pmset -a disablesleep 1` 和 `pmset -a disablesleep 0`,别的都不行。装之前先用 `visudo` 检查过规则。可以读 [setup-lid-mode.sh](setup-lid-mode.sh),一共 24 行。
-- **发热:** 合着盖子放在包里的 MacBook 会热。合盖模式开着时 Steamcup 每 15 秒查一次,macOS 报告严重过热就停。
-- **强制退出:** 合盖时 Steamcup 被强行杀掉,Mac 会一直醒着,直到 Steamcup 再次启动。打开合盖模式时会顺带打开登录时启动,所以最迟下次登录就会恢复。
-- **全部撤销:** `sudo pmset -a disablesleep 0 && sudo rm /etc/sudoers.d/steamcup`。
+- **密码框里跑的是什么:** 跑的是 app 里自带的那份 `setup-lid-mode.sh`。想确认它和 GitHub 上的一样:`diff /Applications/Steamcup.app/Contents/Resources/setup-lid-mode.sh <(curl -s https://raw.githubusercontent.com/Longado/steamcup/main/setup-lid-mode.sh)`,没有输出就是一样。
+- **谁能用这两条命令:** 以你的用户身份运行的任何程序,都能不输密码用这两条命令,不只是 Steamcup。
+- **启动时:** Steamcup 启动时发现合盖睡眠是关着的,就会把它改回开,不管是谁关的。
+- **发热和电量:** 合着盖子放在包里的 MacBook 会热。合盖模式开着时 Steamcup 每 15 秒查一次,macOS 报告严重过热或电量降到 10% 就停。还没在真机上看到它触发。
+- **强制退出:** 合盖时 Steamcup 被强行杀掉,Mac 会一直醒着,直到 Steamcup 再次启动。打开合盖模式时会顺带打开登录时启动,所以最迟下次登录就会恢复。崩溃后的恢复要靠登录时启动开着。
+- **全部卸载:**
+  1. 退出 Steamcup。
+  2. 取消勾选 **Open at Login**。
+  3. `sudo pmset -a disablesleep 0 && sudo rm /etc/sudoers.d/steamcup`
+  4. `defaults delete com.longado.steamcup`
+  5. 删掉 app。
 - **联网:** Steamcup 不发任何网络请求。
 
 ## 和别的工具比
@@ -74,7 +83,21 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 
 ## 快速开始
 
-### 方式 A:让你的 AI 帮你装
+### 方式 A:下载
+
+1. 下载 [Steamcup.zip](https://github.com/Longado/steamcup/releases/latest/download/Steamcup.zip)(在[最新发布页](https://github.com/Longado/steamcup/releases/latest))并解压。
+2. 把 `Steamcup.app` 拖进「应用程序」(Applications)文件夹。
+3. 双击打开。杯子会出现在菜单栏右上角:点一下开或关,右键或按住 Control 点击(Control-click)是定时。刘海挡住时按 ⌃⌥W。
+
+这个程序还没做 Apple 公证,所以第一次打开会被 macOS 拦下(macOS 15 及以后,以前「右键 → 打开」的办法不管用了)。按下面三步放行:
+
+1. 双击 Steamcup,在弹窗里点 **完成**(Done),不要点 **移到废纸篓**(Move to Trash)。
+2. 打开 **系统设置 → 隐私与安全性**,点 **仍要打开**([Apple 说明](https://support.apple.com/zh-cn/102445))。
+3. 输入密码确认。
+
+「仍要打开」按钮只在第 1 步之后大约一小时内出现。
+
+### 方式 B:让你的 AI 帮你装
 
 把这段贴进 Claude Code 或 Codex:
 
@@ -88,7 +111,7 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 5. 告诉我点菜单栏里的杯子试试;第一次勾合盖模式时会要一次管理员密码。
 ```
 
-### 方式 B:自己装
+### 方式 C:自己装
 
 需要 Xcode 命令行工具(`xcode-select --install`)和 macOS 14 或更新。
 
@@ -99,8 +122,6 @@ cd steamcup
 mv Steamcup.app /Applications/
 open /Applications/Steamcup.app
 ```
-
-这个程序还没做 Apple 公证。如果下载的是发布包而不是自己编译,第一次打开会被拦:去 **系统设置 → 隐私与安全性**,点 **仍要打开**([Apple 说明](https://support.apple.com/zh-cn/102445))。
 
 ## 已知问题
 
@@ -116,7 +137,7 @@ open /Applications/Steamcup.app
 | --- | --- |
 | 在别的 Mac 上试 | 在 macOS 14–15 或 Intel MacBook 上试,告诉我们结果 |
 | 研究 macOS 内部 | 找一个不用后台助手、强制退出后也能恢复合盖睡眠的办法 |
-| 写脚本 | 加一个 `steamcup://on?minutes=120` 链接,给快捷指令和脚本用 |
+| 写脚本 | 在 `steamcup://` 链接(`on`、`off`、`on?minutes=N`)的基础上做,比如在快捷指令或脚本里 `open 'steamcup://on?minutes=120'` |
 | 像素画 | 改进 `icon/make_menubar.py` 里 18 像素的菜单栏图标 |
 | 写字 | 翻译菜单里那几句话 |
 

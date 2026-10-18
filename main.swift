@@ -15,11 +15,18 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     var notice: String?         // why Steamcup last stopped on its own, shown at the top of the menu
     var ticker: Timer?
     var pausedByLock: (until: Date?, duration: Int?)?   // a session the screen lock paused, to resume on unlock
+    var launched = false        // steamcup:// links that arrive before launch finishes wait in pendingURL
+    var pendingURL: String?
 
     let prefs = UserDefaults.standard
     var lidMode: Bool { get { prefs.bool(forKey: "lidMode") } set { prefs.set(newValue, forKey: "lidMode") } }
     var screenMayTurnOff: Bool { get { prefs.bool(forKey: "screenMayTurnOff") } set { prefs.set(newValue, forKey: "screenMayTurnOff") } }
     var sleepOnLock: Bool { get { prefs.bool(forKey: "sleepOnLock") } set { prefs.set(newValue, forKey: "sleepOnLock") } }
+
+    func applicationWillFinishLaunching(_ n: Notification) {
+        NSAppleEventManager.shared().setEventHandler(self, andSelector: #selector(handleURL(_:withReply:)),
+                                                     forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL))
+    }
 
     func applicationDidFinishLaunching(_ n: Notification) {
         item.autosaveName = "SteamcupIcon"   // remembers where the cup sits in the menu bar
@@ -38,6 +45,22 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         dnc.addObserver(self, selector: #selector(screenUnlocked), name: .init("com.apple.screenIsUnlocked"), object: nil)
         registerHotkey()
         refresh()
+        launched = true
+        if let s = pendingURL { pendingURL = nil; runRemote(s) }
+    }
+
+    // steamcup://on, steamcup://off, steamcup://on?minutes=N. Safe to repeat: `on` again only restarts the timer, `off` while off does nothing.
+    @objc func handleURL(_ e: NSAppleEventDescriptor, withReply _: NSAppleEventDescriptor) {
+        guard let s = e.paramDescriptor(forKeyword: keyDirectObject)?.stringValue else { return }
+        if launched { runRemote(s) } else { pendingURL = s }
+    }
+
+    func runRemote(_ url: String) {
+        switch remoteCommand(url) {
+        case .on(let minutes)?: start(for: minutes.map { $0 * 60 })
+        case .off?: stop()   // also drops a session paused by screen lock
+        case nil: break
+        }
     }
 
     @objc func clicked() {
@@ -164,6 +187,13 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     var installing = false
     func installLidSetup() {
         guard !installing else { return }
+        let ask = NSAlert()
+        ask.messageText = "Set up lid-closed mode?"
+        ask.informativeText = "Steamcup will add /etc/sudoers.d/steamcup so your user can run two commands without a password: pmset -a disablesleep 1 and 0. The system prompt will be titled osascript."
+        ask.addButton(withTitle: "Continue")
+        ask.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        guard ask.runModal() == .alertFirstButtonReturn else { return }
         installing = true
         DispatchQueue.global(qos: .userInitiated).async {
             let result = LidSleep.install()
@@ -192,7 +222,9 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
         }
         // After a crash Steamcup only switches lid sleep back when it next starts, so make sure it starts at login.
-        if SMAppService.mainApp.status != .enabled { try? SMAppService.mainApp.register() }
+        if SMAppService.mainApp.status != .enabled {
+            do { try SMAppService.mainApp.register() } catch { NSLog("Steamcup: Open at Login failed: \(error)") }
+        }
         if on && !lidActive { beginLidSession() }
         refresh()
     }
@@ -256,9 +288,15 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         _ = add(headline(), nil)
         if on && lidActive { _ = add("Even with the lid closed", nil) }
         if let n = notice { _ = add("⚠︎ " + n, nil) }
+        // Checked on every menu open, so the warning stays until it is fixed, also after a relaunch.
+        switch lidMode ? SMAppService.mainApp.status : .enabled {
+        case .enabled: break
+        case .requiresApproval: _ = add("⚠︎ Allow Steamcup in System Settings → Login Items (crash recovery needs it)", nil)
+        default: _ = add("⚠︎ Open at Login is off — move Steamcup to Applications (crash recovery needs it)", nil)
+        }
         m.addItem(.separator())
 
-        for (title, secs) in [("Until I turn it off", 0), ("For 30 minutes", 1800), ("For 1 hour", 3600), ("For 2 hours", 7200), ("For 4 hours", 14400)] {
+        for (title, secs) in [("Until I turn it off", 0), ("For 30 minutes", 1800), ("For 1 hour", 3600), ("For 2 hours", 7200), ("For 4 hours", 14400), ("For 8 hours", 28800)] {
             _ = add(title, #selector(startTimed(_:)), checked: on && (duration ?? 0) == secs, tag: secs)
         }
         if on {
