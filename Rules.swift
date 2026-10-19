@@ -11,6 +11,15 @@ func lidSafety(thermal: ProcessInfo.ThermalState, onBattery: Bool, percent: Int)
     return nil
 }
 
+// After a crash or forced quit: what the background check (and the next launch) does about lid sleep.
+// ours: Steamcup switched lid sleep off and has not switched it back.
+enum RecoveryStep: Equatable { case nothing, forget, switchBack }
+
+func recoveryStep(ours: Bool, sleepDisabled: Bool, appRunning: Bool) -> RecoveryStep {
+    if appRunning || !ours { return .nothing }   // a running Steamcup handles its own session; someone else's switch is left alone
+    return sleepDisabled ? .switchBack : .forget
+}
+
 // Time left shown beside the cup: "1:05", "0:01". Rounds up so it never shows 0:00 while still on.
 func remainingText(_ seconds: TimeInterval) -> String {
     let m = max(1, Int((seconds / 60).rounded(.up)))

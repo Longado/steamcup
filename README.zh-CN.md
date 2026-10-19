@@ -21,20 +21,20 @@
 
 <p align="center"><img src="docs/media/steamcup-hero.gif" width="960" alt="Steamcup:让 Mac 不睡,合上盖子也不睡。功能示意图。"></p>
 
-大多数防睡眠工具只管「闲着别睡」,一合盖 Mac 照样睡。**Steamcup 合上盖子也能接着跑。它会尽可能把这个开关改回来,做不到的话,下次启动时再改。**
+大多数防睡眠工具只管「闲着别睡」,一合盖 Mac 照样睡。**Steamcup 合上盖子也能接着跑。它停下时会把合盖睡眠改回来;它崩溃或被强制退出,一分钟内也会改回来。**
 
 **点一下就开。合盖模式只输一次密码。Mac 过热或电量低,它自己停。**
 
 ## 是什么
 
-一个原生的 macOS 菜单栏小程序,约 400 行 Swift,不依赖任何第三方库。点一下杯子,Mac 就不睡,杯子装满并冒热气;再点一下,恢复正常睡眠。右键是定时和选项。
+一个原生的 macOS 菜单栏小程序,约 500 行 Swift,不依赖任何第三方库。点一下杯子,Mac 就不睡,杯子装满并冒热气;再点一下,恢复正常睡眠。右键是定时和选项。
 
 MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法是改一个全系统的开关 `pmset disablesleep`,要管理员权限。Steamcup 只在开着的时候改这个开关,下面几种情况都会改回来:
 - 你关掉它、定时到点、或者退出
 - Mac 过热,或电量降到 10%
-- 它被强制退出过,下次启动时
+- 它崩溃或被强制退出,一分钟内(由一个小的后台检查来改)
 
-> **早期版本。** 在一台装 macOS 26 的 Apple 芯片 MacBook 上手动测过(下载包也能在 Intel Mac 和 macOS 14 以上运行,但还没人试过):开关、定时、合盖模式开和关、正常退出和强制退出、锁屏暂停。还没测:macOS 14–15、Intel Mac、过热和低电量通知真的弹出来。见[已知问题](#已知问题)。
+> **早期版本。** 在一台装 macOS 26 的 Apple 芯片 MacBook 上手动测过(下载包也能在 Intel Mac 和 macOS 14 以上运行,但还没人试过):开关、定时、合盖模式开和关、正常退出和强制退出(`kill -9` 后 55 秒合盖睡眠就改回来了)、锁屏暂停。还没测:macOS 14–15、Intel Mac、过热和低电量通知真的弹出来、合着盖时合盖模式停下后 Mac 真的睡下去。见[已知问题](#已知问题)。
 
 ## 怎么用
 
@@ -42,7 +42,7 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 | --- | --- |
 | 点杯子 | 让 Mac 和屏幕都不睡(电源断言,和 `caffeinate -d` 一样);再点一下停 |
 | 右键 → For 30 minutes … 8 hours | 在杯子旁显示剩余时间(`0:30`),到点自己停,中间睡过也照样准 |
-| 勾上 **Keep Awake with Lid Closed** | 第一次会要一次管理员密码;勾上就开,杯子上有把小锁,合盖不再让 Mac 睡(屏幕照样黑,Mac 在后面接着跑) |
+| 勾上 **Keep Awake with Lid Closed** | 第一次会要一次管理员密码,并加一个崩溃恢复用的后台检查;勾上就开,杯子上有把小锁,合盖不再让 Mac 睡(屏幕照样黑,Mac 在后面接着跑) |
 | Mac 太热时合盖,或用电池到 10% | 15 秒内停掉合盖模式,并弹一条通知 |
 | 勾上 **Let the Screen Turn Off** | 屏幕可以熄,Mac 接着跑 |
 | 勾上 **Sleep When Screen Locks** | 锁屏时松手,解锁后按原来的结束时间接着来 |
@@ -61,12 +61,14 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 - **管理员那一步允许什么:** 只加一个文件 `/etc/sudoers.d/steamcup`,让你的用户不输密码就能跑两条命令:`pmset -a disablesleep 1` 和 `pmset -a disablesleep 0`,别的都不行。装之前先用 `visudo` 检查过规则。可以读 [setup-lid-mode.sh](setup-lid-mode.sh),一共 24 行。
 - **密码框里跑的是什么:** 跑的是 app 里自带的那份 `setup-lid-mode.sh`。想确认它和 GitHub 上的一样:`diff /Applications/Steamcup.app/Contents/Resources/setup-lid-mode.sh <(curl -s https://raw.githubusercontent.com/Longado/steamcup/main/setup-lid-mode.sh)`,没有输出就是一样。
 - **谁能用这两条命令:** 以你的用户身份运行的任何程序,都能不输密码用这两条命令,不只是 Steamcup。
-- **启动时:** Steamcup 启动时发现合盖睡眠是关着的,就会把它改回开,不管是谁关的。
+- **只改自己关的:** Steamcup 会记下自己关过合盖睡眠,只改回它自己关的。你自己跑过 `sudo pmset -a disablesleep 1`,它不会动。
 - **发热和电量:** 合着盖子放在包里的 MacBook 会热。合盖模式开着时 Steamcup 每 15 秒查一次,macOS 报告严重过热或电量降到 10% 就停。还没在真机上看到它触发。
-- **强制退出:** 合盖时 Steamcup 被强行杀掉,Mac 会一直醒着,直到 Steamcup 再次启动。打开合盖模式时会顺带打开登录时启动,所以最迟下次登录就会恢复。崩溃后的恢复要靠登录时启动开着。
+- **已经合着盖:** 合着盖时合盖睡眠被改回来(定时到点、过热、低电、崩溃),Steamcup 会用 `pmset sleepnow` 让 Mac 睡下;接着外接显示器用合盖模式时除外。还没在真的合着盖时试过。
+- **崩溃或强制退出:** 勾上合盖模式会加一个后台检查,在 系统设置 → 通用 → 登录项(与扩展)里列在 Steamcup 名下。launchd 每分钟跑一次:Steamcup 不在了、合盖睡眠还关着,就改回来。Steamcup 卡死但没退出时它管不到。取消勾选合盖模式就会移除它。
+- **链接:** `steamcup://on` 链接能打开 Steamcup,勾了合盖模式就带合盖模式。浏览器打开这种链接前会先问你,过热和低电停止照样生效。
 - **全部卸载:**
   1. 退出 Steamcup。
-  2. 取消勾选 **Open at Login**。
+  2. 取消勾选 **Keep Awake with Lid Closed**(会移除后台检查)和 **Open at Login**。
   3. `sudo pmset -a disablesleep 0 && sudo rm /etc/sudoers.d/steamcup`
   4. `defaults delete com.longado.steamcup`
   5. 删掉 app。
@@ -127,7 +129,7 @@ open /Applications/Steamcup.app
 ## 已知问题
 
 - 点 Dock 图标不再开关:macOS 分不清「点 Dock」和「从访达或聚焦再次打开」。请用杯子、⌃⌥W 或 Dock 图标的右键菜单。
-- 合盖时被强制退出,要等 Steamcup 下次启动才恢复(见[安全吗](#安全吗))。
+- Steamcup 卡死但没退出时,合盖睡眠会一直关着:后台检查要等它真的退出才接手(见[安全吗](#安全吗))。
 - 过热和低电量停止只测了判断逻辑,还没在真的很热或快没电的 Mac 上看到它触发。
 
 ## 一起做
@@ -137,7 +139,7 @@ open /Applications/Steamcup.app
 | 你喜欢…… | 可以贡献 |
 | --- | --- |
 | 在别的 Mac 上试 | 在 macOS 14–15 或 Intel MacBook 上试,告诉我们结果 |
-| 研究 macOS 内部 | 找一个不用后台助手、强制退出后也能恢复合盖睡眠的办法 |
+| 研究 macOS 内部 | 发现 Steamcup 卡死,或者查清 `pmset disablesleep` 重启后还在不在 |
 | 写脚本 | 在 `steamcup://` 链接(`on`、`off`、`on?minutes=N`)的基础上做,比如在快捷指令或脚本里 `open 'steamcup://on?minutes=120'` |
 | 像素画 | 改进 `icon/make_menubar.py` 里 18 像素的菜单栏图标 |
 | 写字 | 翻译菜单里那几句话 |
@@ -150,6 +152,7 @@ open /Applications/Steamcup.app
 ./build.sh                                   # 编出 Steamcup.app(Apple 芯片和 Intel 通用,macOS 14 起),ad-hoc 签名
 ditto -c -k --norsrc --noextattr --keepParent Steamcup.app Steamcup.zip   # 发布用压缩包
 swiftc Rules.swift tests/main.swift -o /tmp/steamcup-tests && /tmp/steamcup-tests
+swiftc Rules.swift tests/recovery/main.swift -o /tmp/steamcup-recovery && /tmp/steamcup-recovery
 python3 icon/make_icon.py                    # 应用图标
 python3 icon/make_menubar.py                 # 菜单栏图标(关 / 开 / 合盖)
 ```

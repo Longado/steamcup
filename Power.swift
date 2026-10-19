@@ -33,10 +33,19 @@ enum LidSleep {
         return setupDone ? .done : .failed("The permission was not installed.")
     }
 
+    // Whether Steamcup switched lid sleep off and has not switched it back yet. Crash recovery acts only on this,
+    // so lid sleep someone switched off by hand is left alone.
+    static let oursKey = "lidSleepOffByUs"
+
     @discardableResult
     static func keepAwakeWhenClosed(_ on: Bool) -> Bool {
+        let prefs = UserDefaults.standard
+        if on { prefs.set(true, forKey: oursKey) }   // before switching, so a crash right after still counts as ours
         let r = run("/usr/bin/sudo", ["-n", "/usr/bin/pmset", "-a", "disablesleep", on ? "1" : "0"])
         if !r.ok { NSLog("Steamcup: pmset disablesleep \(on ? 1 : 0) failed: \(r.out)") }
+        if on != r.ok { prefs.set(false, forKey: oursKey) }   // switched back, or never got switched off; a failed switch-back stays ours
+        // A Mac whose lid is already shut may not sleep just because lid sleep is back on, so ask for it.
+        if !on && r.ok && Lid.shutAndSleeps { _ = run("/usr/bin/pmset", ["sleepnow"]) }
         return r.ok
     }
 
@@ -54,6 +63,18 @@ enum LidSleep {
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         p.waitUntilExit()
         return (p.terminationStatus == 0, String(decoding: data, as: UTF8.self))
+    }
+}
+
+enum Lid {
+    // The lid is shut and that would normally sleep this Mac (false with an external display in clamshell mode).
+    static var shutAndSleeps: Bool {
+        let root = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
+        defer { IOObjectRelease(root) }
+        func flag(_ key: String) -> Bool {
+            (IORegistryEntryCreateCFProperty(root, key as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue() as? Bool) ?? false
+        }
+        return flag("AppleClamshellState") && flag("AppleClamshellCausesSleep")
     }
 }
 
