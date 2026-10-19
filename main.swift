@@ -255,9 +255,16 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
 
     // The background check: launchd runs `Steamcup --watchdog` every minute (Contents/Library/LaunchAgents).
     let watchdog = SMAppService.agent(plistName: "com.longado.steamcup.watchdog.plist")
+    // launchd ties the check to the app build that registered it, so after an update it can't find the program
+    // although the status still reads enabled. Register again whenever the build changes.
     func registerWatchdog() {
-        guard watchdog.status != .enabled else { return }
-        do { try watchdog.register() } catch { NSLog("Steamcup: background check failed to register: \(error)") }
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+        guard watchdog.status != .enabled || prefs.string(forKey: "watchdogBuild") != build else { return }
+        do {
+            if watchdog.status == .enabled { try watchdog.unregister() }
+            try watchdog.register()
+            prefs.set(build, forKey: "watchdogBuild")
+        } catch { NSLog("Steamcup: background check failed to register: \(error)") }
     }
 
     @objc func toggleScreen() {
