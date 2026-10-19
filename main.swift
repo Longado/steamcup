@@ -14,7 +14,8 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     var lidActive = false       // we switched lid sleep off for this session
     var notice: String?         // why Steamcup last stopped on its own, shown at the top of the menu
     var ticker: Timer?
-    var pausedByLock: (until: Date?, duration: Int?)?   // a session the screen lock paused, to resume on unlock
+    var pausedByLock: (until: Date?, duration: Int?, pid: pid_t?)?   // a session the screen lock paused, to resume on unlock
+    var watched: (pid: pid_t, exit: DispatchSourceProcess)?   // `steamcup run`: stay on until this process ends
     var launched = false        // steamcup:// links that arrive before launch finishes wait in pendingURL
     var pendingURL: String?
 
@@ -62,6 +63,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     func runRemote(_ url: String) {
         switch remoteCommand(url) {
         case .on(let minutes)?: start(for: minutes.map { $0 * 60 })
+        case .onWhile(let pid)?: start(for: nil); watch(pid)
         case .off?: stop()   // also drops a session paused by screen lock
         case nil: break
         }
@@ -81,6 +83,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
 
     func start(for seconds: Int?) {
         pausedByLock = nil
+        unwatch()   // the newest request sets when it ends, as with timers
         notice = nil
         if !on {
             assertion = Assertion.hold(screenMayTurnOff: screenMayTurnOff)
@@ -97,8 +100,21 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         refresh()
     }
 
+    // Stops when the process ends; checks once more after arming, in case it ended first.
+    func watch(_ pid: pid_t) {
+        let s = DispatchSource.makeProcessSource(identifier: pid, eventMask: .exit, queue: .main)
+        s.setEventHandler { [weak self] in self?.stop() }
+        s.resume()
+        watched = (pid, s)
+        if kill(pid, 0) != 0 && errno == ESRCH { stop() }
+        refresh()
+    }
+
+    func unwatch() { watched?.exit.cancel(); watched = nil }
+
     @objc func stop() {
         pausedByLock = nil
+        unwatch()
         duration = nil
         until = nil
         if let a = assertion { Assertion.release(a); assertion = nil }
@@ -156,7 +172,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
 
     @objc func screenLocked() {
         guard sleepOnLock, on else { return }
-        let p = (until, duration)
+        let p = (until, duration, watched?.pid)
         stop()               // clears pausedByLock, so set it after
         pausedByLock = p
     }
@@ -168,6 +184,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         start(for: nil)
         duration = p.duration   // keep the original end time, not a fresh timer
         until = p.until
+        if let pid = p.pid { watch(pid) }
         refresh()
     }
 
@@ -279,6 +296,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
 
     func headline() -> String {
         guard on else { return "Steamcup is off — your Mac sleeps as usual" }
+        if let pid = watched?.pid { return "Keeping your Mac awake until \(processName(pid)) finishes" }
         guard let u = until else { return "Keeping your Mac awake" }
         let f = DateFormatter()
         f.timeStyle = .short
@@ -313,7 +331,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         power.keyEquivalent = "w"
         power.keyEquivalentModifierMask = [.control, .option]
         for (title, secs) in [("Until I turn it off", 0), ("For 30 minutes", 1800), ("For 1 hour", 3600), ("For 2 hours", 7200), ("For 4 hours", 14400), ("For 8 hours", 28800)] {
-            _ = add(title, #selector(startTimed(_:)), checked: on && (duration ?? 0) == secs, tag: secs)
+            _ = add(title, #selector(startTimed(_:)), checked: on && watched == nil && (duration ?? 0) == secs, tag: secs)
         }
         m.addItem(.separator())
 
@@ -379,6 +397,36 @@ if CommandLine.arguments.dropFirst().first == "--watchdog" {
     case .nothing: break
     }
     exit(0)
+}
+
+// The command's name for the menu, e.g. "ffmpeg".
+func processName(_ pid: pid_t) -> String {
+    var buf = [CChar](repeating: 0, count: 256)
+    return proc_name(pid, &buf, UInt32(buf.count)) > 0 ? String(cString: buf) : "the command"
+}
+
+// `Steamcup run [--] <command…>` from Terminal: runs the command and keeps the Mac awake until it ends
+// (lid closed too, if lid mode is ticked). Passes on the command's exit code. Runs no UI.
+if CommandLine.arguments.dropFirst().first == "run" {
+    guard let cmd = runCommand(Array(CommandLine.arguments.dropFirst())) else {
+        fputs("usage: steamcup run [--] <command> [arguments…]\n", stderr)
+        exit(2)
+    }
+    var pid: pid_t = 0
+    let argv = cmd.map { strdup($0) } + [nil]
+    let rc = posix_spawnp(&pid, cmd[0], nil, nil, argv, environ)   // same process group, so Ctrl-C reaches it
+    guard rc == 0 else { fputs("steamcup: \(cmd[0]): \(String(cString: strerror(rc)))\n", stderr); exit(127) }
+    signal(SIGINT, SIG_IGN)    // only after spawning, so the command still gets Ctrl-C; we wait and report how it ended
+    signal(SIGQUIT, SIG_IGN)
+    let open = Process()
+    open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+    open.arguments = ["-g", "steamcup://on?pid=\(pid)"]
+    var reached = false
+    do { try open.run(); open.waitUntilExit(); reached = open.terminationStatus == 0 } catch { fputs("steamcup: \(error.localizedDescription)\n", stderr) }
+    if !reached { fputs("steamcup: couldn't reach Steamcup, so the Mac may sleep while this runs\n", stderr) }
+    var status: Int32 = 0
+    while waitpid(pid, &status, 0) == -1 && errno == EINTR {}
+    exit(shellExitCode(waitStatus: status))
 }
 
 let app = App()

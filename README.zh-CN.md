@@ -2,7 +2,7 @@
 
 <h1 align="center">Steamcup</h1>
 <p align="center"><strong>菜单栏里一只像素咖啡杯,让 Mac 不睡,合上盖子也不睡。</strong></p>
-<p align="center">适合编译、下载、跑智能体这类要很久的活:让它接着跑,你合上电脑走开。</p>
+<p align="center">编译、渲染、跑智能体这类要很久的活,让它接着跑,你合上电脑走开。macOS 14 起可用,Apple 芯片和 Intel 都行。</p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue" alt="MIT"></a>
@@ -25,16 +25,18 @@
 
 **点一下就开。合盖模式只输一次密码。Mac 过热或电量低,它自己停。**
 
+**也可以在终端里用:`steamcup run -- <命令>` 让 Mac 一直醒着,合上盖也不睡,直到这条命令跑完。**
+
 ## 是什么
 
-一个原生的 macOS 菜单栏小程序,约 500 行 Swift,不依赖任何第三方库。点一下杯子,Mac 就不睡,杯子装满并冒热气;再点一下,恢复正常睡眠。右键是定时和选项。
+一个原生的 macOS 菜单栏小程序,约 600 行 Swift,不依赖任何第三方库。点一下杯子,Mac 就不睡,杯子装满并冒热气;再点一下,恢复正常睡眠。右键是定时和选项。
 
 MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法是改一个全系统的开关 `pmset disablesleep`,要管理员权限。Steamcup 只在开着的时候改这个开关,下面几种情况都会改回来:
 - 你关掉它、定时到点、或者退出
 - Mac 过热,或电量降到 10%
 - 它崩溃或被强制退出,一分钟内(由一个小的后台检查来改)
 
-> **早期版本。** 在一台装 macOS 26 的 Apple 芯片 MacBook 上手动测过(下载包也能在 Intel Mac 和 macOS 14 以上运行,但还没人试过):开关、定时、合盖模式开和关、正常退出和强制退出(`kill -9` 后 55 秒合盖睡眠就改回来了)、锁屏暂停。还没测:macOS 14–15、Intel Mac、过热和低电量通知真的弹出来、合着盖时合盖模式停下后 Mac 真的睡下去。见[已知问题](#已知问题)。
+> **早期版本。** 在一台装 macOS 26 的 Apple 芯片 MacBook 上手动测过(下载包也能在 Intel Mac 和 macOS 14 以上运行,但还没人试过):开关、定时、合盖模式开和关、正常退出和强制退出(`kill -9` 后 55 秒合盖睡眠就改回来了)、合着盖时定时到点(Mac 睡下了,唤醒正常)、锁屏暂停、`steamcup run`(命令跑着时开、一结束就关、Ctrl-C)。还没测:macOS 14–15、Intel Mac、过热和低电停止真的触发。见[已知问题](#已知问题)。
 
 ## 怎么用
 
@@ -47,6 +49,7 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 | 勾上 **Let the Screen Turn Off** | 屏幕可以熄,Mac 接着跑 |
 | 勾上 **Sleep When Screen Locks** | 锁屏时松手,解锁后按原来的结束时间接着来 |
 | 任何地方按 **⌃⌥W** | 开或关,刘海挡住杯子时用得上 |
+| 在终端跑 `steamcup run -- make build`([先设好命令](#命令行)) | 命令跑完前 Mac 一直醒着,跑完就放手;勾了合盖模式就带合盖模式。Ctrl-C 和命令的退出码原样传回 |
 | 在脚本或快捷指令里跑 `open -g 'steamcup://on?minutes=120'` | 开 2 小时(`steamcup://on` 一直开,`steamcup://off` 关);勾了合盖模式就带合盖模式 |
 
 ## 可以试试这些
@@ -55,6 +58,7 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 - 右键 → **For 30 minutes** → 杯子旁出现 `0:30`,开始倒数。
 - 勾上 **Keep Awake with Lid Closed**(杯子带小锁开起来),跑 `pmset -g | grep SleepDisabled` → 看到 `SleepDisabled 1`。点掉杯子 → 这一行没了。
 - 合盖模式开着时放首歌,合盖 30 秒 → 歌一直在放。
+- 跑 `steamcup run -- sleep 20`,在另一个窗口跑 `pmset -g assertions | grep Steamcup` → 开着。20 秒后 → 没了。
 
 ## 安全吗
 
@@ -63,7 +67,7 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 - **谁能用这两条命令:** 以你的用户身份运行的任何程序,都能不输密码用这两条命令,不只是 Steamcup。
 - **只改自己关的:** Steamcup 会记下自己关过合盖睡眠,只改回它自己关的。你自己跑过 `sudo pmset -a disablesleep 1`,它不会动。
 - **发热和电量:** 合着盖子放在包里的 MacBook 会热。合盖模式开着时 Steamcup 每 15 秒查一次,macOS 报告严重过热或电量降到 10% 就停。还没在真机上看到它触发。
-- **已经合着盖:** 合着盖时合盖睡眠被改回来(定时到点、过热、低电、崩溃),Steamcup 会用 `pmset sleepnow` 让 Mac 睡下;接着外接显示器用合盖模式时除外。还没在真的合着盖时试过。
+- **已经合着盖:** 合着盖时合盖睡眠被改回来(定时到点、过热、低电、崩溃),Steamcup 会用 `pmset sleepnow` 让 Mac 睡下;接着外接显示器用合盖模式时除外。合着盖定时到点时试过。
 - **崩溃或强制退出:** 勾上合盖模式会加一个后台检查,在 系统设置 → 通用 → 登录项(与扩展)里列在 Steamcup 名下。launchd 每分钟跑一次:Steamcup 不在了、合盖睡眠还关着,就改回来。Steamcup 卡死但没退出时它管不到。取消勾选合盖模式就会移除它。
 - **链接:** `steamcup://on` 链接能打开 Steamcup,勾了合盖模式就带合盖模式。浏览器打开这种链接前会先问你,过热和低电停止照样生效。
 - **全部卸载:**
@@ -76,13 +80,16 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 
 ## 和别的工具比
 
-| | Steamcup | [KeepingYouAwake](https://github.com/newmarcel/KeepingYouAwake) | [Amphetamine](https://apps.apple.com/us/app/amphetamine/id937984704?mt=12) |
-| --- | --- | --- | --- |
-| 价格 / 源码 | 免费,MIT | 免费,MIT | 免费,不开源 |
-| 合盖不睡 | 能,输一次密码 | 不能([#258](https://github.com/newmarcel/KeepingYouAwake/issues/258)、[#262](https://github.com/newmarcel/KeepingYouAwake/issues/262)) | 能;Apple 芯片要另装 Power Protect 插件 |
-| 锁屏时让它睡 | 能 | 不能([#98](https://github.com/newmarcel/KeepingYouAwake/issues/98)) | 有锁屏相关选项 |
-| 图标旁显示剩余时间 | 能 | 不能([#154](https://github.com/newmarcel/KeepingYouAwake/issues/154)) | 没找到 |
-| 全局快捷键 | ⌃⌥W | 没有 | 有 |
+| | Steamcup | [Insomnia](https://github.com/krishhgg/Insomnia) | [Adrafinil](https://github.com/kageroumado/adrafinil) | [KeepingYouAwake](https://github.com/newmarcel/KeepingYouAwake) | [Amphetamine](https://apps.apple.com/us/app/amphetamine/id937984704?mt=12) |
+| --- | --- | --- | --- | --- | --- |
+| 价格 / 源码 | 免费,MIT | 免费,MIT | 免费,MIT | 免费,MIT | 免费,不开源 |
+| 系统要求 | macOS 14 起,Apple 芯片和 Intel | macOS 26 起,Apple 芯片 | macOS 26.4 起([macOS 15 移植版](https://github.com/valentine/adrafinil)) | macOS 10.13 起 | macOS 10.13 起 |
+| 合盖不睡 | 能,输一次密码 | 能 | 能,靠特权助手 | 不能([#258](https://github.com/newmarcel/KeepingYouAwake/issues/258)、[#262](https://github.com/newmarcel/KeepingYouAwake/issues/262)) | 能;Apple 芯片要另装 Power Protect 插件 |
+| 崩溃后恢复合盖睡眠 | 一分钟内 | 能,恢复程序每分钟查一次 | 自动释放没人管的占用 | 用不着 | 没找到 |
+| 醒到一条命令跑完 | `steamcup run -- <命令>` | 没找到 | `adrafinil hold --pid` | 不能 | 有「某 App 运行时」触发 |
+| 接编程智能体 | 不接 | 不接 | 接 Claude Code、Codex、Cursor 等 10 种 | 不接 | 不接 |
+
+在 macOS 26 上跑编程智能体,Adrafinil 功能更多。Steamcup 面向 macOS 14、15 和 Intel Mac 上的合盖工作,而且任何命令都能用,不限于智能体。
 
 ## 快速开始
 
@@ -126,6 +133,17 @@ mv Steamcup.app /Applications/
 open /Applications/Steamcup.app
 ```
 
+### 命令行
+
+app 自己的程序就是 `steamcup` 命令。在 shell 里设一次:
+
+```sh
+echo "alias steamcup='/Applications/Steamcup.app/Contents/MacOS/Steamcup'" >> ~/.zshrc && source ~/.zshrc
+steamcup run -- ffmpeg -i talk.mov talk.mp4
+```
+
+Steamcup 没开着时,`steamcup run` 会先把它打开。命令跑着时你选了定时或者手动关掉,以你的选择为准。
+
 ## 已知问题
 
 - 点 Dock 图标会弹出菜单,而不是开关:macOS 分不清「点 Dock」和「从访达或聚焦再次打开」。
@@ -153,6 +171,7 @@ open /Applications/Steamcup.app
 ditto -c -k --norsrc --noextattr --keepParent Steamcup.app Steamcup.zip   # 发布用压缩包
 swiftc Rules.swift tests/main.swift -o /tmp/steamcup-tests && /tmp/steamcup-tests
 swiftc Rules.swift tests/recovery/main.swift -o /tmp/steamcup-recovery && /tmp/steamcup-recovery
+swiftc Rules.swift tests/run/main.swift -o /tmp/steamcup-run && /tmp/steamcup-run
 python3 icon/make_icon.py                    # 应用图标
 python3 icon/make_menubar.py                 # 菜单栏图标(关 / 开 / 合盖)
 ```

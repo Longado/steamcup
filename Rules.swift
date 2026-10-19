@@ -34,8 +34,9 @@ func sleepDisabled(inPmsetOutput out: String) -> Bool {
     }
 }
 
-// steamcup://on, steamcup://off, steamcup://on?minutes=N. Anything else, including a bad minutes value, is ignored.
-enum RemoteCommand: Equatable { case on(minutes: Int?), off }
+// steamcup://on, steamcup://off, steamcup://on?minutes=N, and steamcup://on?pid=N (stay on while that process lives,
+// sent by `steamcup run`). Anything else, including a bad number, is ignored.
+enum RemoteCommand: Equatable { case on(minutes: Int?), onWhile(pid: Int32), off }
 
 func remoteCommand(_ s: String) -> RemoteCommand? {
     guard let c = URLComponents(string: s), c.scheme?.lowercased() == "steamcup" else { return nil }
@@ -44,10 +45,26 @@ func remoteCommand(_ s: String) -> RemoteCommand? {
     case "off": return .off
     case "on":
         if items.isEmpty { return .on(minutes: nil) }
-        guard items.count == 1, items[0].name == "minutes", let m = items[0].value.flatMap({ Int($0) }), (1...10080).contains(m) else { return nil }
-        return .on(minutes: m)
+        guard items.count == 1, let n = items[0].value.flatMap({ Int32($0) }) else { return nil }
+        switch items[0].name {
+        case "minutes" where (1...10080).contains(n): return .on(minutes: Int(n))
+        case "pid" where n > 1: return .onWhile(pid: n)   // 1 is launchd, which never exits
+        default: return nil
+        }
     default: return nil
     }
+}
+
+// `steamcup run [--] <command…>`: the command to run, or nil if these arguments are not a run.
+func runCommand(_ args: [String]) -> [String]? {
+    guard args.first == "run" else { return nil }
+    let rest = args.dropFirst().first == "--" ? args.dropFirst(2) : args.dropFirst()
+    return rest.isEmpty ? nil : Array(rest)
+}
+
+// A waitpid status as a shell reports it: the command's exit code, or 128 + the signal that ended it.
+func shellExitCode(waitStatus s: Int32) -> Int32 {
+    s & 0x7f == 0 ? (s >> 8) & 0xff : 128 + (s & 0x7f)
 }
 
 // 'it'\''s' — safe inside single quotes in sh/zsh.

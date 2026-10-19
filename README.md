@@ -2,7 +2,7 @@
 
 <h1 align="center">Steamcup</h1>
 <p align="center"><strong>A pixel coffee cup in your menu bar that keeps your Mac awake, even with the lid closed.</strong></p>
-<p align="center">For long builds, downloads and agent runs you want to leave running while you close the laptop and walk away.</p>
+<p align="center">Close the laptop and walk away while a build, render or agent run finishes. Runs on macOS 14 and later, on Apple Silicon and Intel.</p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue" alt="MIT"></a>
@@ -25,16 +25,18 @@ Most keep-awake apps stop at "don't idle-sleep", so the Mac still sleeps the mom
 
 **One click to turn it on. One password prompt to set up lid mode. Switches itself off when the Mac gets hot or the battery runs low.**
 
+**Or from Terminal: `steamcup run -- <command>` keeps the Mac awake, lid closed too, until that command finishes.**
+
 ## What it is
 
-A native macOS menu bar app of about 500 lines of Swift, with no dependencies. Click the cup and your Mac stays awake: the cup fills and steams. Click again and it sleeps as usual. Right-click for timers and options.
+A native macOS menu bar app of about 600 lines of Swift, with no dependencies. Click the cup and your Mac stays awake: the cup fills and steams. Click again and it sleeps as usual. Right-click for timers and options.
 
 Closing the lid puts a MacBook to sleep whatever apps ask. The only way around that is a system-wide switch, `pmset disablesleep`, which needs admin rights. Steamcup flips that switch only while it is on. It flips it back when:
 - you turn it off, a timer ends, or you quit
 - the Mac gets too hot or the battery drops to 10%
 - within a minute, if Steamcup crashes or is force-quit (a small background check does it)
 
-> **Early version.** Tested by hand on one Apple Silicon MacBook running macOS 26 (the download also runs on Intel Macs and macOS 14+, but nobody has tried those yet): on/off, timers, lid mode on and off, quit and forced quit (lid sleep came back 55 s after `kill -9`), screen-lock pause. Not yet tested: macOS 14–15, Intel Macs, the heat and low-battery notifications firing for real, the Mac going to sleep when lid mode stops with the lid already shut. See [Known issues](#known-issues).
+> **Early version.** Tested by hand on one Apple Silicon MacBook running macOS 26 (the download also runs on Intel Macs and macOS 14+, but nobody has tried those yet): on/off, timers, lid mode on and off, quit and forced quit (lid sleep came back 55 s after `kill -9`), a timer ending with the lid shut (the Mac went to sleep, and woke normally), screen-lock pause, `steamcup run` (on while the command runs, off the moment it ends, Ctrl-C). Not yet tested: macOS 14–15, Intel Macs, the heat and low-battery stops firing for real. See [Known issues](#known-issues).
 
 ## How it works
 
@@ -47,6 +49,7 @@ Closing the lid puts a MacBook to sleep whatever apps ask. The only way around t
 | tick **Let the Screen Turn Off** | lets the display sleep while the Mac keeps running |
 | tick **Sleep When Screen Locks** | lets go when you lock the screen, and picks up again on unlock with the same end time |
 | press **⌃⌥W** anywhere | toggles, handy when the notch hides the cup |
+| run `steamcup run -- make build` in Terminal ([set up the command](#command-line)) | keeps the Mac awake until the command ends, then lets go; uses lid mode if you ticked it. Ctrl-C and the command's exit code pass straight through |
 | run `open -g 'steamcup://on?minutes=120'` from a script or Shortcut | turns on for 2 hours (`steamcup://on` until off, `steamcup://off` to stop); uses lid mode if you ticked it |
 
 ## Try these
@@ -55,6 +58,7 @@ Closing the lid puts a MacBook to sleep whatever apps ask. The only way around t
 - Right-click → **For 30 minutes** → `0:30` appears beside the cup and counts down.
 - Tick **Keep Awake with Lid Closed** (the cup turns on with a padlock), run `pmset -g | grep SleepDisabled` → `SleepDisabled 1`. Click the cup off → the line is gone.
 - With lid mode on, start some music and close the lid for 30 seconds → the music keeps playing.
+- Run `steamcup run -- sleep 20`, then in another window `pmset -g assertions | grep Steamcup` → on. 20 seconds later → gone.
 
 ## Is it safe?
 
@@ -63,7 +67,7 @@ Closing the lid puts a MacBook to sleep whatever apps ask. The only way around t
 - **Who can use those two commands:** any program run as your user can use them without a password, not only Steamcup.
 - **Only its own switch:** Steamcup records when it switches lid sleep off, and only ever switches back what it switched off. If you ran `sudo pmset -a disablesleep 1` yourself, it leaves that alone.
 - **Heat and battery:** a closed MacBook in a bag can get hot. Steamcup checks every 15 seconds while lid mode is on, and stops if macOS reports the Mac as seriously hot or the battery drops to 10%. Not yet seen on real hardware.
-- **Lid already shut:** when lid sleep comes back while the lid is shut (a timer ends, heat, low battery, a crash), Steamcup asks the Mac to sleep with `pmset sleepnow`, unless an external display is keeping it in clamshell mode. Not yet tried with the lid really shut.
+- **Lid already shut:** when lid sleep comes back while the lid is shut (a timer ends, heat, low battery, a crash), Steamcup asks the Mac to sleep with `pmset sleepnow`, unless an external display is keeping it in clamshell mode. Tried with a timer ending and the lid shut.
 - **Crash or force-quit:** ticking lid mode adds a background check, listed under Steamcup in System Settings → General → Login Items (& Extensions). launchd runs it every minute: if Steamcup is gone and left lid sleep off, it switches it back. It does not catch a Steamcup that hangs without quitting. Unticking lid mode removes it.
 - **Links:** a `steamcup://on` link can turn Steamcup on, with lid mode if you ticked it. Your browser asks before opening one, and the heat and battery stops still apply.
 - **Remove everything:**
@@ -76,13 +80,16 @@ Closing the lid puts a MacBook to sleep whatever apps ask. The only way around t
 
 ## Compared with
 
-| | Steamcup | [KeepingYouAwake](https://github.com/newmarcel/KeepingYouAwake) | [Amphetamine](https://apps.apple.com/us/app/amphetamine/id937984704?mt=12) |
-| --- | --- | --- | --- |
-| Price / source | Free, MIT | Free, MIT | Free, closed source |
-| Lid closed | Yes, one password prompt | No ([#258](https://github.com/newmarcel/KeepingYouAwake/issues/258), [#262](https://github.com/newmarcel/KeepingYouAwake/issues/262)) | Yes; on Apple Silicon needs the separate Power Protect add-on |
-| Sleep when screen locks | Yes | No ([#98](https://github.com/newmarcel/KeepingYouAwake/issues/98)) | Has screen-lock options |
-| Time left beside the icon | Yes | No ([#154](https://github.com/newmarcel/KeepingYouAwake/issues/154)) | Not that we found |
-| Global hotkey | ⌃⌥W | No | Yes |
+| | Steamcup | [Insomnia](https://github.com/krishhgg/Insomnia) | [Adrafinil](https://github.com/kageroumado/adrafinil) | [KeepingYouAwake](https://github.com/newmarcel/KeepingYouAwake) | [Amphetamine](https://apps.apple.com/us/app/amphetamine/id937984704?mt=12) |
+| --- | --- | --- | --- | --- | --- |
+| Price / source | Free, MIT | Free, MIT | Free, MIT | Free, MIT | Free, closed source |
+| Runs on | macOS 14+, Apple Silicon and Intel | macOS 26+, Apple Silicon | macOS 26.4+ ([backport for 15](https://github.com/valentine/adrafinil)) | macOS 10.13+ | macOS 10.13+ |
+| Lid closed | Yes, one password prompt | Yes | Yes, privileged helper | No ([#258](https://github.com/newmarcel/KeepingYouAwake/issues/258), [#262](https://github.com/newmarcel/KeepingYouAwake/issues/262)) | Yes; on Apple Silicon needs the separate Power Protect add-on |
+| Lid sleep back after a crash | Within a minute | Yes, a recovery agent every minute | Releases abandoned holds | Not needed | Not that we found |
+| Awake until a command ends | `steamcup run -- <command>` | Not that we found | `adrafinil hold --pid` | No | "While an app runs" trigger |
+| Coding-agent hooks | No | No | Claude Code, Codex, Cursor and 7 more | No | No |
+
+On macOS 26 with coding agents, Adrafinil does more. Steamcup is for lid-closed work on macOS 14 and 15 and on Intel Macs, and for any command, not just agents.
 
 ## Quick start
 
@@ -127,6 +134,17 @@ mv Steamcup.app /Applications/
 open /Applications/Steamcup.app
 ```
 
+### Command line
+
+The app's own binary is the `steamcup` command. Add it to your shell once:
+
+```sh
+echo "alias steamcup='/Applications/Steamcup.app/Contents/MacOS/Steamcup'" >> ~/.zshrc && source ~/.zshrc
+steamcup run -- ffmpeg -i talk.mov talk.mp4
+```
+
+`steamcup run` starts Steamcup if it isn't running. If you pick a timer or turn Steamcup off while a command runs, your choice wins.
+
 ## Known issues
 
 - Clicking the Dock icon shows the menu instead of toggling, because macOS reports a Dock click and a re-open from Finder or Spotlight the same way.
@@ -154,6 +172,7 @@ Issues and pull requests are welcome.
 ditto -c -k --norsrc --noextattr --keepParent Steamcup.app Steamcup.zip   # release zip
 swiftc Rules.swift tests/main.swift -o /tmp/steamcup-tests && /tmp/steamcup-tests
 swiftc Rules.swift tests/recovery/main.swift -o /tmp/steamcup-recovery && /tmp/steamcup-recovery
+swiftc Rules.swift tests/run/main.swift -o /tmp/steamcup-run && /tmp/steamcup-run
 python3 icon/make_icon.py                    # app icon
 python3 icon/make_menubar.py                 # menu bar icons (off / on / lid)
 ```
