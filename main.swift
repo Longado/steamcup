@@ -309,13 +309,11 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         }
         m.addItem(.separator())
 
+        let power = add(on ? "Turn Off" : "Turn On", #selector(toggle))
+        power.keyEquivalent = "w"
+        power.keyEquivalentModifierMask = [.control, .option]
         for (title, secs) in [("Until I turn it off", 0), ("For 30 minutes", 1800), ("For 1 hour", 3600), ("For 2 hours", 7200), ("For 4 hours", 14400), ("For 8 hours", 28800)] {
             _ = add(title, #selector(startTimed(_:)), checked: on && (duration ?? 0) == secs, tag: secs)
-        }
-        if on {
-            let off = add("Turn Off", #selector(stop))
-            off.keyEquivalent = "w"
-            off.keyEquivalentModifierMask = [.control, .option]
         }
         m.addItem(.separator())
 
