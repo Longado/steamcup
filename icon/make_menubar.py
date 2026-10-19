@@ -23,7 +23,7 @@ def cup(img, dy, filled):
         if filled or y in (top, top + 6):
             rect(img, x0, x1, y)
         else:
-            dot(img, x0, y); dot(img, x1, y)
+            rect(img, x0, x0 + 1, y); rect(img, x1 - 1, x1, y)   # 2px walls: the empty cup weighs about as much as the full one
     # handle: outlined loop on the right
     rect(img, 13, 15, top + 1)
     dot(img, 15, top + 2); dot(img, 15, top + 3)
@@ -50,7 +50,7 @@ def build(name, fn):
     img.save(os.path.join(here, f"{name}.png"))
     img.resize((N * 2, N * 2), Image.NEAREST).save(os.path.join(here, f"{name}@2x.png"))
 
-def off(img):  cup(img, -3, False)
+def off(img):  cup(img, 0, False)   # same spot as on/lid, so the cup doesn't jump when toggled
 def on(img):   cup(img, 0, True); steam(img)
 def lid(img):  cup(img, 0, True); padlock(img)
 
