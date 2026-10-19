@@ -68,11 +68,11 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 - **只改自己关的:** Steamcup 会记下自己关过合盖睡眠,只改回它自己关的。你自己跑过 `sudo pmset -a disablesleep 1`,它不会动。
 - **发热和电量:** 合着盖子放在包里的 MacBook 会热。合盖模式开着时 Steamcup 每 15 秒查一次,macOS 报告严重过热或电量降到 10% 就停。还没在真机上看到它触发。
 - **已经合着盖:** 合着盖时合盖睡眠被改回来(定时到点、过热、低电、崩溃),Steamcup 会用 `pmset sleepnow` 让 Mac 睡下;接着外接显示器用合盖模式时除外。合着盖定时到点时试过。
-- **崩溃或强制退出:** 勾上合盖模式会加一个后台检查,在 系统设置 → 通用 → 登录项(与扩展)里列在 Steamcup 名下。launchd 每分钟跑一次:Steamcup 不在了、合盖睡眠还关着,就改回来。Steamcup 卡死但没退出时它管不到。取消勾选合盖模式就会移除它。
+- **崩溃或强制退出:** 勾上合盖模式会加一个后台检查,文件是 `~/Library/LaunchAgents/com.longado.steamcup.recovery.plist`。launchd 每分钟跑一次:Steamcup 不在了、合盖睡眠还关着,就改回来。Steamcup 卡死但没退出时它管不到。取消勾选合盖模式就会移除它。
 - **链接:** `steamcup://on` 链接能打开 Steamcup,勾了合盖模式就带合盖模式。浏览器打开这种链接前会先问你,过热和低电停止照样生效。
 - **全部卸载:**
   1. 退出 Steamcup。
-  2. 取消勾选 **Keep Awake with Lid Closed**(会移除后台检查)和 **Open at Login**。
+  2. 取消勾选 **Keep Awake with Lid Closed**(会移除后台检查)和 **Open at Login**。app 已经删了的话:`launchctl bootout gui/$(id -u)/com.longado.steamcup.recovery; rm ~/Library/LaunchAgents/com.longado.steamcup.recovery.plist`
   3. `sudo pmset -a disablesleep 0 && sudo rm /etc/sudoers.d/steamcup`
   4. `defaults delete com.longado.steamcup`
   5. 删掉 app。

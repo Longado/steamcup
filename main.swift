@@ -43,7 +43,8 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         case .switchBack: if !LidSleep.setupDone || !LidSleep.keepAwakeWhenClosed(false) { notice = Self.manualFix }
         case .forget, .nothing: prefs.set(false, forKey: LidSleep.oursKey)
         }
-        if lidMode { registerWatchdog() }   // also sets it up for anyone updating from a version without it
+        dropOldWatchdog()
+        if lidMode { Watchdog.install() }   // also sets it up after an update or a move
         UNUserNotificationCenter.current().delegate = self
         let dnc = DistributedNotificationCenter.default()
         dnc.addObserver(self, selector: #selector(screenLocked), name: .init("com.apple.screenIsLocked"), object: nil)
@@ -197,9 +198,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         if lidMode && ready {
             lidMode = false
             endLidSession()
-            if !lidActive {   // nothing left to watch
-                do { try watchdog.unregister() } catch { NSLog("Steamcup: background check failed to unregister: \(error)") }
-            }
+            if !lidActive { Watchdog.remove() }   // nothing left to watch
         } else if ready {
             enableLidMode()
         } else {
@@ -215,7 +214,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         guard !installing else { return }
         let ask = NSAlert()
         ask.messageText = "Set up lid-closed mode?"
-        ask.informativeText = "Steamcup will add /etc/sudoers.d/steamcup so your user can run two commands without a password: pmset -a disablesleep 1 and 0. The system prompt will be titled osascript.\n\nIt also adds a background check, listed under Login Items, that switches lid sleep back on within a minute if Steamcup crashes or is force-quit."
+        ask.informativeText = "Steamcup will add /etc/sudoers.d/steamcup so your user can run two commands without a password: pmset -a disablesleep 1 and 0. The system prompt will be titled osascript.\n\nIt also adds a background check (a launchd job in ~/Library/LaunchAgents) that switches lid sleep back on within a minute if Steamcup crashes or is force-quit."
         ask.addButton(withTitle: "Continue")
         ask.addButton(withTitle: "Cancel")
         NSApp.activate(ignoringOtherApps: true)
@@ -247,24 +246,19 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             prefs.set(true, forKey: "askedNotify")
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
         }
-        registerWatchdog()
+        Watchdog.install()
         // Ticking it means "keep my Mac running with the lid shut": turn on right away, not on the next cup click.
         if !on { start(for: nil) } else if !lidActive { beginLidSession() }
         refresh()
     }
 
-    // The background check: launchd runs `Steamcup --watchdog` every minute (Contents/Library/LaunchAgents).
-    let watchdog = SMAppService.agent(plistName: "com.longado.steamcup.watchdog.plist")
-    // launchd ties the check to the app build that registered it, so after an update it can't find the program
-    // although the status still reads enabled. Register again whenever the build changes.
-    func registerWatchdog() {
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
-        guard watchdog.status != .enabled || prefs.string(forKey: "watchdogBuild") != build else { return }
-        do {
-            if watchdog.status == .enabled { try watchdog.unregister() }
-            try watchdog.register()
-            prefs.set(build, forKey: "watchdogBuild")
-        } catch { NSLog("Steamcup: background check failed to register: \(error)") }
+    // 1.2–1.3 registered the background check with SMAppService (it stopped launching after rebuilds). Remove that.
+    // ponytail: the bundle keeps the old plist so this can find it; drop both once nobody runs 1.2–1.3.
+    func dropOldWatchdog() {
+        let old = SMAppService.agent(plistName: "com.longado.steamcup.watchdog.plist")
+        guard old.status == .enabled || old.status == .requiresApproval else { return }
+        do { try old.unregister() } catch { NSLog("Steamcup: couldn't remove the old background check: \(error)") }
+        prefs.removeObject(forKey: "watchdogBuild")
     }
 
     @objc func toggleScreen() {
@@ -329,11 +323,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         if let n = notice { _ = add("⚠︎ " + n, nil) }
         if cupBehindNotch { _ = add("⚠︎ The cup is hidden behind the notch: quit a menu bar app or ⌘-drag icons out to make room", nil) }
         // Checked on every menu open, so the warning stays until it is fixed, also after a relaunch.
-        switch lidMode ? watchdog.status : .enabled {
-        case .enabled: break
-        case .requiresApproval: _ = add("⚠︎ Allow Steamcup in System Settings → Login Items (crash recovery needs it)", nil)
-        default: _ = add("⚠︎ Crash recovery isn't running — move Steamcup to Applications and reopen it", nil)
-        }
+        if lidMode && !Watchdog.isLoaded { _ = add("⚠︎ Crash recovery isn't running: untick and tick Keep Awake with Lid Closed", nil) }
         m.addItem(.separator())
 
         let power = add(on ? "Turn Off" : "Turn On", #selector(toggle))

@@ -68,11 +68,11 @@ Closing the lid puts a MacBook to sleep whatever apps ask. The only way around t
 - **Only its own switch:** Steamcup records when it switches lid sleep off, and only ever switches back what it switched off. If you ran `sudo pmset -a disablesleep 1` yourself, it leaves that alone.
 - **Heat and battery:** a closed MacBook in a bag can get hot. Steamcup checks every 15 seconds while lid mode is on, and stops if macOS reports the Mac as seriously hot or the battery drops to 10%. Not yet seen on real hardware.
 - **Lid already shut:** when lid sleep comes back while the lid is shut (a timer ends, heat, low battery, a crash), Steamcup asks the Mac to sleep with `pmset sleepnow`, unless an external display is keeping it in clamshell mode. Tried with a timer ending and the lid shut.
-- **Crash or force-quit:** ticking lid mode adds a background check, listed under Steamcup in System Settings → General → Login Items (& Extensions). launchd runs it every minute: if Steamcup is gone and left lid sleep off, it switches it back. It does not catch a Steamcup that hangs without quitting. Unticking lid mode removes it.
+- **Crash or force-quit:** ticking lid mode adds a background check, `~/Library/LaunchAgents/com.longado.steamcup.recovery.plist`. launchd runs it every minute: if Steamcup is gone and left lid sleep off, it switches it back. It does not catch a Steamcup that hangs without quitting. Unticking lid mode removes it.
 - **Links:** a `steamcup://on` link can turn Steamcup on, with lid mode if you ticked it. Your browser asks before opening one, and the heat and battery stops still apply.
 - **Remove everything:**
   1. Quit Steamcup.
-  2. Untick **Keep Awake with Lid Closed** (removes the background check) and **Open at Login**.
+  2. Untick **Keep Awake with Lid Closed** (removes the background check) and **Open at Login**. If Steamcup is already gone: `launchctl bootout gui/$(id -u)/com.longado.steamcup.recovery; rm ~/Library/LaunchAgents/com.longado.steamcup.recovery.plist`
   3. `sudo pmset -a disablesleep 0 && sudo rm /etc/sudoers.d/steamcup`
   4. `defaults delete com.longado.steamcup`
   5. Delete the app.

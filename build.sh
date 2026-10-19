@@ -25,7 +25,8 @@ cat > $APP/Contents/Info.plist <<'PL'
 </dict></array>
 </dict></plist>
 PL
-# The background check (crash recovery for lid mode), registered by the app with SMAppService.agent.
+# Kept only so the app can unregister the 1.2–1.3 background check (SMAppService); the current one is a
+# LaunchAgent the app writes to ~/Library/LaunchAgents.
 mkdir -p $APP/Contents/Library/LaunchAgents
 cat > $APP/Contents/Library/LaunchAgents/com.longado.steamcup.watchdog.plist <<'PL'
 <?xml version="1.0" encoding="UTF-8"?>

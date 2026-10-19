@@ -49,7 +49,7 @@ enum LidSleep {
         return r.ok
     }
 
-    private static func run(_ path: String, _ args: [String], timeout: Double? = 5) -> (ok: Bool, out: String) {
+    static func run(_ path: String, _ args: [String], timeout: Double? = 5) -> (ok: Bool, out: String) {   // also used by Watchdog
         let p = Process()
         let pipe = Pipe()
         p.executableURL = URL(fileURLWithPath: path)
@@ -63,6 +63,41 @@ enum LidSleep {
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         p.waitUntilExit()
         return (p.terminationStatus == 0, String(decoding: data, as: UTF8.self))
+    }
+}
+
+// The background check: a per-user launchd job that runs `Steamcup --watchdog` every minute while lid mode is ticked.
+// A plain LaunchAgent naming this binary by path. (1.2–1.3 used SMAppService, whose job stopped launching once an
+// ad-hoc signed app was rebuilt or updated.)
+enum Watchdog {
+    static let label = "com.longado.steamcup.recovery"
+    static var plist: URL { FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/LaunchAgents/\(label).plist") }
+    static var service: String { "gui/\(getuid())/\(label)" }
+    static var isLoaded: Bool { LidSleep.run("/bin/launchctl", ["print", service]).ok }
+
+    @discardableResult
+    static func install() -> Bool {
+        guard let exe = Bundle.main.executablePath,
+              let job = try? PropertyListSerialization.data(fromPropertyList: ["Label": label, "ProgramArguments": [exe, "--watchdog"],
+                  "StartInterval": 60, "RunAtLoad": true, "ProcessType": "Background"], format: .xml, options: 0) else { return false }
+        if (try? Data(contentsOf: plist)) == job && isLoaded { return true }   // already in place: reloading can show a Background Items notice
+        do {
+            try FileManager.default.createDirectory(at: plist.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try job.write(to: plist, options: .atomic)
+        } catch { NSLog("Steamcup: couldn't write \(plist.path): \(error)"); return false }
+        if isLoaded { _ = LidSleep.run("/bin/launchctl", ["bootout", service]) }   // the app moved: load the new path
+        for _ in 0..<3 {   // bootstrap can fail briefly while a bootout finishes
+            if LidSleep.run("/bin/launchctl", ["bootstrap", "gui/\(getuid())", plist.path]).ok || isLoaded { return true }
+            usleep(300_000)
+        }
+        NSLog("Steamcup: couldn't load the background check")
+        return false
+    }
+
+    static func remove() {
+        if isLoaded { _ = LidSleep.run("/bin/launchctl", ["bootout", service]) }
+        guard FileManager.default.fileExists(atPath: plist.path) else { return }
+        do { try FileManager.default.removeItem(at: plist) } catch { NSLog("Steamcup: couldn't remove \(plist.path): \(error)") }
     }
 }
 
