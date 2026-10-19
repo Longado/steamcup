@@ -90,7 +90,7 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 
 1. 下载 [Steamcup.zip](https://github.com/Longado/steamcup/releases/latest/download/Steamcup.zip)(在[最新发布页](https://github.com/Longado/steamcup/releases/latest))并解压。
 2. 把 `Steamcup.app` 拖进「应用程序」(Applications)文件夹。
-3. 双击打开。杯子会出现在菜单栏右上角:点一下开或关,右键或按住 Control 点击(Control-click)是定时。刘海挡住时按 ⌃⌥W。
+3. 双击打开。杯子会出现在菜单栏右上角:点一下开或关,右键或按住 Control 点击(Control-click)是定时。刘海挡住时点 Steamcup 的 Dock 图标,弹出的是同一个菜单;或者按 ⌃⌥W。
 
 这个程序还没做 Apple 公证,所以第一次打开会被 macOS 拦下(macOS 15 及以后,以前「右键 → 打开」的办法不管用了)。按下面三步放行:
 
@@ -128,7 +128,7 @@ open /Applications/Steamcup.app
 
 ## 已知问题
 
-- 点 Dock 图标不再开关:macOS 分不清「点 Dock」和「从访达或聚焦再次打开」。请用杯子、⌃⌥W 或 Dock 图标的右键菜单。
+- 点 Dock 图标会弹出菜单,而不是开关:macOS 分不清「点 Dock」和「从访达或聚焦再次打开」。
 - Steamcup 卡死但没退出时,合盖睡眠会一直关着:后台检查要等它真的退出才接手(见[安全吗](#安全吗))。
 - 过热和低电量停止只测了判断逻辑,还没在真的很热或快没电的 Mac 上看到它触发。
 

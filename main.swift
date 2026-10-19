@@ -300,6 +300,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         _ = add(headline(), nil)
         if on && lidActive { _ = add("Even with the lid closed", nil) }
         if let n = notice { _ = add("⚠︎ " + n, nil) }
+        if cupBehindNotch { _ = add("⚠︎ The cup is hidden behind the notch: quit a menu bar app or ⌘-drag icons out to make room", nil) }
         // Checked on every menu open, so the warning stays until it is fixed, also after a relaunch.
         switch lidMode ? watchdog.status : .enabled {
         case .enabled: break
@@ -330,8 +331,21 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         return m
     }
 
-    // Dock: the menu-bar cup can hide behind the notch, so the Dock icon's right-click menu has everything.
-    // (A Dock click and a re-open from Finder/Spotlight look the same to the app, so neither toggles.)
+    // Dock: the menu-bar cup can hide behind the notch, so the Dock icon's right-click menu has everything,
+    // and a Dock click shows the same menu by the pointer. (A Dock click and a re-open from Finder/Spotlight
+    // look the same to the app, so neither toggles.)
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        buildMenu().popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+        return false
+    }
+
+    // The cup sits under the notch when the menu bar is too full to show it.
+    var cupBehindNotch: Bool {
+        guard let w = item.button?.window, let s = w.screen ?? NSScreen.main,
+              let left = s.auxiliaryTopLeftArea, let right = s.auxiliaryTopRightArea else { return false }   // no notch
+        return w.frame.maxX > left.maxX && w.frame.minX < right.minX
+    }
+
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
         let m = buildMenu()
         m.removeItem(at: m.numberOfItems - 1)   // Quit — the Dock adds its own

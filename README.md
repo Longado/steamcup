@@ -90,7 +90,7 @@ Closing the lid puts a MacBook to sleep whatever apps ask. The only way around t
 
 1. Download [Steamcup.zip](https://github.com/Longado/steamcup/releases/latest/download/Steamcup.zip) from the [latest release](https://github.com/Longado/steamcup/releases/latest) and unzip it.
 2. Drag `Steamcup.app` to your Applications folder.
-3. Double-click it. The cup appears at the top right of the menu bar: click it to turn on or off, right-click or Control-click it for timers. If the notch hides it, press ⌃⌥W.
+3. Double-click it. The cup appears at the top right of the menu bar: click it to turn on or off, right-click or Control-click it for timers. If the notch hides it, click Steamcup's Dock icon for the same menu, or press ⌃⌥W.
 
 The app is not notarized yet, so macOS blocks the first open (on macOS 15 and later the old right-click → Open shortcut no longer works). To get past it:
 
@@ -129,7 +129,7 @@ open /Applications/Steamcup.app
 
 ## Known issues
 
-- Clicking the Dock icon no longer toggles, because macOS reports a Dock click and a re-open from Finder or Spotlight the same way. Use the cup, ⌃⌥W, or the Dock icon's right-click menu.
+- Clicking the Dock icon shows the menu instead of toggling, because macOS reports a Dock click and a re-open from Finder or Spotlight the same way.
 - If Steamcup hangs without quitting, lid sleep stays off: the background check only steps in once it has quit (see [Is it safe?](#is-it-safe)).
 - The heat and low-battery stops are tested as logic; neither has been seen firing on a real hot or drained Mac yet.
 
