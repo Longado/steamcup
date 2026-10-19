@@ -13,7 +13,8 @@
 
 <p align="center">
   <a href="README.md">English</a> ·
-  <a href="docs/media/steamcup-intro.mp4">介绍视频(12 秒)</a> ·
+  <a href="docs/media/steamcup-explainer.mp4">讲解视频(1 分半,英文)</a> ·
+  <a href="docs/media/steamcup-intro.mp4">介绍短片(12 秒)</a> ·
   <a href="#快速开始">快速开始</a> ·
   <a href="#一起做">一起做</a>
 </p>
@@ -41,7 +42,7 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 | --- | --- |
 | 点杯子 | 让 Mac 和屏幕都不睡(电源断言,和 `caffeinate -d` 一样);再点一下停 |
 | 右键 → For 30 minutes … 8 hours | 在杯子旁显示剩余时间(`0:30`),到点自己停,中间睡过也照样准 |
-| 勾上 **Keep Awake with Lid Closed** | 第一次会要一次管理员密码;之后开着时杯子上有把小锁,合盖不再让 Mac 睡 |
+| 勾上 **Keep Awake with Lid Closed** | 第一次会要一次管理员密码;勾上就开,杯子上有把小锁,合盖不再让 Mac 睡(屏幕照样黑,Mac 在后面接着跑) |
 | Mac 太热时合盖,或用电池到 10% | 15 秒内停掉合盖模式,并弹一条通知 |
 | 勾上 **Let the Screen Turn Off** | 屏幕可以熄,Mac 接着跑 |
 | 勾上 **Sleep When Screen Locks** | 锁屏时松手,解锁后按原来的结束时间接着来 |
@@ -52,7 +53,7 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 
 - 点杯子,在终端跑 `pmset -g assertions | grep Steamcup` → 看到 `Steamcup is on`。再点一下 → 没了。
 - 右键 → **For 30 minutes** → 杯子旁出现 `0:30`,开始倒数。
-- 勾上 **Keep Awake with Lid Closed**,点杯子,跑 `pmset -g | grep SleepDisabled` → 看到 `SleepDisabled 1`。点掉杯子 → 这一行没了。
+- 勾上 **Keep Awake with Lid Closed**(杯子带小锁开起来),跑 `pmset -g | grep SleepDisabled` → 看到 `SleepDisabled 1`。点掉杯子 → 这一行没了。
 - 合盖模式开着时放首歌,合盖 30 秒 → 歌一直在放。
 
 ## 安全吗

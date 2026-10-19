@@ -13,7 +13,8 @@
 
 <p align="center">
   <a href="README.zh-CN.md">中文</a> ·
-  <a href="docs/media/steamcup-intro.mp4">Intro video (12 s)</a> ·
+  <a href="docs/media/steamcup-explainer.mp4">How it works (1.5 min video)</a> ·
+  <a href="docs/media/steamcup-intro.mp4">Intro (12 s)</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#build-with-us">Build with us</a>
 </p>
@@ -41,7 +42,7 @@ Closing the lid puts a MacBook to sleep whatever apps ask. The only way around t
 | --- | --- |
 | click the cup | keeps the Mac and screen awake (a power assertion, like `caffeinate -d`); click again to stop |
 | right-click → For 30 minutes … 8 hours | shows the time left beside the cup (`0:30`) and stops by itself at the end, even across sleep |
-| tick **Keep Awake with Lid Closed** | the first time, asks for your admin password once; then the cup shows a padlock while on, and the lid no longer sleeps the Mac |
+| tick **Keep Awake with Lid Closed** | the first time, asks for your admin password once; turns Steamcup on with a padlock on the cup, and the lid no longer sleeps the Mac (the screen still goes dark, the Mac keeps running) |
 | close the lid on a hot Mac, or on battery at 10% | stops lid mode within 15 seconds and posts a notification |
 | tick **Let the Screen Turn Off** | lets the display sleep while the Mac keeps running |
 | tick **Sleep When Screen Locks** | lets go when you lock the screen, and picks up again on unlock with the same end time |
@@ -52,7 +53,7 @@ Closing the lid puts a MacBook to sleep whatever apps ask. The only way around t
 
 - Click the cup, then run `pmset -g assertions | grep Steamcup` in Terminal → you see `Steamcup is on`. Click again → it's gone.
 - Right-click → **For 30 minutes** → `0:30` appears beside the cup and counts down.
-- Tick **Keep Awake with Lid Closed**, click the cup, run `pmset -g | grep SleepDisabled` → `SleepDisabled 1`. Click the cup off → the line is gone.
+- Tick **Keep Awake with Lid Closed** (the cup turns on with a padlock), run `pmset -g | grep SleepDisabled` → `SleepDisabled 1`. Click the cup off → the line is gone.
 - With lid mode on, start some music and close the lid for 30 seconds → the music keeps playing.
 
 ## Is it safe?

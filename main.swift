@@ -69,7 +69,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             item.menu = buildMenu()
             item.button?.performClick(nil)   // shows the menu
             item.menu = nil                  // so the next left-click toggles again
-        } else { toggle() }
+        } else if (e?.clickCount ?? 1) <= 1 { toggle() }   // a double-click counts once, so it can't switch on and straight back off
     }
 
     @objc func toggle() { on ? stop() : start(for: nil) }
