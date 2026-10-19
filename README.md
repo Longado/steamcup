@@ -143,7 +143,7 @@ echo "alias steamcup='/Applications/Steamcup.app/Contents/MacOS/Steamcup'" >> ~/
 steamcup run -- ffmpeg -i talk.mov talk.mp4
 ```
 
-`steamcup run` starts Steamcup if it isn't running. If you pick a timer or turn Steamcup off while a command runs, your choice wins.
+`steamcup run` starts Steamcup if it isn't running. If Steamcup is already on until you turn it off, it stays on after the command. If you pick a timer or turn Steamcup off while a command runs, your choice wins.
 
 ## Known issues
 

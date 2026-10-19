@@ -142,7 +142,7 @@ echo "alias steamcup='/Applications/Steamcup.app/Contents/MacOS/Steamcup'" >> ~/
 steamcup run -- ffmpeg -i talk.mov talk.mp4
 ```
 
-Steamcup 没开着时,`steamcup run` 会先把它打开。命令跑着时你选了定时或者手动关掉,以你的选择为准。
+Steamcup 没开着时,`steamcup run` 会先把它打开。Steamcup 本来就是「一直开」时,命令跑完它照样开着。命令跑着时你选了定时或者手动关掉,以你的选择为准。
 
 ## 已知问题
 

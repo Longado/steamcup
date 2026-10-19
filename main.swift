@@ -63,7 +63,9 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     func runRemote(_ url: String) {
         switch remoteCommand(url) {
         case .on(let minutes)?: start(for: minutes.map { $0 * 60 })
-        case .onWhile(let pid)?: start(for: nil); watch(pid)
+        case .onWhile(let pid)?:
+            if on && until == nil && watched == nil { return }   // already on until turned off: a command ending must not turn it off
+            start(for: nil); watch(pid)
         case .off?: stop()   // also drops a session paused by screen lock
         case nil: break
         }
