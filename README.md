@@ -69,7 +69,7 @@ Closing the lid puts a MacBook to sleep whatever apps ask. The only way around t
 - **Heat and battery:** a closed MacBook in a bag can get hot. Steamcup checks every 15 seconds while lid mode is on, and stops if macOS reports the Mac as seriously hot or the battery drops to 10%. Not yet seen on real hardware.
 - **Log:** while Steamcup is on, it writes a line a minute to `~/Library/Logs/Steamcup.log`: lid open or shut, battery level and temperature, and the heat level macOS reports. It also notes each time it turns on or off and why, and each lid sleep switch. **Show Log** in the menu opens it. Nothing leaves your Mac.
 - **Lid already shut:** when lid sleep comes back while the lid is shut (a timer ends, heat, low battery, a crash), Steamcup asks the Mac to sleep with `pmset sleepnow`, unless an external display is keeping it in clamshell mode. Tried with a timer ending and the lid shut.
-- **Crash or force-quit:** ticking lid mode adds a background check, `~/Library/LaunchAgents/com.longado.steamcup.recovery.plist`. launchd runs it every minute: if Steamcup is gone and left lid sleep off, it switches it back. It does not catch a Steamcup that hangs without quitting. Unticking lid mode removes it.
+- **Crash or force-quit:** ticking lid mode adds a background check, `~/Library/LaunchAgents/com.longado.steamcup.recovery.plist`. launchd runs it every minute: if Steamcup is gone and left lid sleep off, it switches it back. It also makes the heat and battery check itself, so a Steamcup that hangs without quitting still can't leave a hot or nearly flat Mac awake with the lid shut. Unticking lid mode removes it.
 - **Links:** a `steamcup://on` link can turn Steamcup on, with lid mode if you ticked it. Your browser asks before opening one, and the heat and battery stops still apply.
 - **Remove everything:**
   1. Quit Steamcup.
@@ -149,7 +149,7 @@ steamcup run -- ffmpeg -i talk.mov talk.mp4
 ## Known issues
 
 - Clicking the Dock icon shows the menu instead of toggling, because macOS reports a Dock click and a re-open from Finder or Spotlight the same way.
-- If Steamcup hangs without quitting, lid sleep stays off: the background check only steps in once it has quit (see [Is it safe?](#is-it-safe)).
+- If Steamcup hangs without quitting, lid sleep stays off until the Mac gets seriously hot or the battery drops to 10%; then the background check switches it back (see [Is it safe?](#is-it-safe)).
 - The heat and low-battery stops are tested as logic; neither has been seen firing on a real hot or drained Mac yet.
 
 ## Build with us

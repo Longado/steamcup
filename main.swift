@@ -402,15 +402,19 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
 }
 
 // `Steamcup --watchdog` is the background check, run by launchd every minute while lid mode is ticked:
-// if Steamcup is gone but left lid sleep off, switch it back. Runs no UI and exits.
+// if Steamcup is gone, or may be frozen while the Mac is too hot or the battery low, and lid sleep is still off
+// from it, switch it back. Runs no UI and exits.
 if CommandLine.arguments.dropFirst().first == "--watchdog" {
     let me = getpid()
     let running = NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "")
         .contains { $0.processIdentifier != me }
     let ours = UserDefaults.standard.bool(forKey: LidSleep.oursKey)
-    switch recoveryStep(ours: ours, sleepDisabled: ours && LidSleep.isOff, appRunning: running) {
+    let b = Battery.read()
+    let danger = lidSafety(thermal: ProcessInfo.processInfo.thermalState, onBattery: b.onBattery, percent: b.percent)
+    switch watchdogStep(ours: ours, sleepDisabled: ours && LidSleep.isOff, appRunning: running, unsafe: danger != nil) {
     case .switchBack:
-        Log.note("background check: Steamcup is gone and left lid sleep off")
+        Log.note(running ? "background check: \(danger?.rawValue ?? "unsafe") and lid sleep is still off"
+                         : "background check: Steamcup is gone and left lid sleep off")
         LidSleep.keepAwakeWhenClosed(false)
     case .forget: UserDefaults.standard.set(false, forKey: LidSleep.oursKey)
     case .nothing: break

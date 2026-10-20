@@ -15,8 +15,8 @@ cat > $APP/Contents/Info.plist <<'PL'
 <key>CFBundleName</key><string>Steamcup</string>
 <key>CFBundleExecutable</key><string>Steamcup</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>1.3.1</string>
-<key>CFBundleVersion</key><string>6</string>
+<key>CFBundleShortVersionString</key><string>1.3.2</string>
+<key>CFBundleVersion</key><string>7</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>CFBundleURLTypes</key><array><dict>

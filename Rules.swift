@@ -20,6 +20,14 @@ func recoveryStep(ours: Bool, sleepDisabled: Bool, appRunning: Bool) -> Recovery
     return sleepDisabled ? .switchBack : .forget
 }
 
+// The background check, every minute. A running Steamcup handles its own session, but it may be frozen, and then
+// its own heat and battery stop is frozen too: so on heat or a low battery, switch its lid sleep back anyway.
+// Only ever .switchBack while it runs: clearing its record could race with a switch it is making right now.
+func watchdogStep(ours: Bool, sleepDisabled: Bool, appRunning: Bool, unsafe: Bool) -> RecoveryStep {
+    if appRunning { return ours && sleepDisabled && unsafe ? .switchBack : .nothing }
+    return recoveryStep(ours: ours, sleepDisabled: sleepDisabled, appRunning: false)
+}
+
 // Time left shown beside the cup: "1:05", "0:01". Rounds up so it never shows 0:00 while still on.
 func remainingText(_ seconds: TimeInterval) -> String {
     let m = max(1, Int((seconds / 60).rounded(.up)))
