@@ -36,7 +36,7 @@ Closing the lid puts a MacBook to sleep whatever apps ask. The only way around t
 - the Mac gets too hot or the battery drops to 10%
 - within a minute, if Steamcup crashes or is force-quit (a small background check does it)
 
-> **Early version.** Tested by hand on one Apple Silicon MacBook running macOS 26 (the download also runs on Intel Macs and macOS 14+, but nobody has tried those yet): on/off, timers, lid mode on and off, quit and forced quit (lid sleep came back 55 s after `kill -9`), a timer ending with the lid shut (the Mac went to sleep, and woke normally), screen-lock pause, `steamcup run` (on while the command runs, off the moment it ends, Ctrl-C). Not yet tested: macOS 14–15, Intel Macs, the heat and low-battery stops firing for real. See [Known issues](#known-issues).
+> **Early version.** Tested by hand on one Apple Silicon MacBook running macOS 26 (the download also runs on Intel Macs and macOS 14+, but nobody has tried those yet): on/off, timers, lid mode on and off, quit and forced quit (after `kill -9`, lid sleep came back within a minute: 55 s and 16 s in two tries), a timer ending with the lid shut (the Mac went to sleep, and woke normally), screen-lock pause, `steamcup run` (on while the command runs, off the moment it ends, Ctrl-C). Not yet tested: macOS 14–15, Intel Macs, the heat and low-battery stops firing for real. See [Known issues](#known-issues).
 
 ## How it works
 
