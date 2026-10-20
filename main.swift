@@ -14,6 +14,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     var lidActive = false       // we switched lid sleep off for this session
     var notice: String?         // why Steamcup last stopped on its own, shown at the top of the menu
     var ticker: Timer?
+    var lastSample = Date.distantPast   // when tick() last wrote a reading to the log
     var pausedByLock: (until: Date?, duration: Int?, pid: pid_t?)?   // a session the screen lock paused, to resume on unlock
     var watched: (pid: pid_t, exit: DispatchSourceProcess)?   // `steamcup run`: stay on until this process ends
     var launched = false        // steamcup:// links that arrive before launch finishes wait in pendingURL
@@ -36,11 +37,15 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         item.button?.imagePosition = .imageLeft
         item.button?.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+        Log.rotate()
+        Log.note("Steamcup opened")
         // Left over from a crash or forced quit: lid sleep is still off, so switch it back.
         // Versions before 1.2 kept no record, so a missing one counts as ours.
         let ours = prefs.object(forKey: LidSleep.oursKey) == nil || prefs.bool(forKey: LidSleep.oursKey)
         switch recoveryStep(ours: ours, sleepDisabled: LidSleep.isOff, appRunning: false) {
-        case .switchBack: if !LidSleep.setupDone || !LidSleep.keepAwakeWhenClosed(false) { notice = Self.manualFix }
+        case .switchBack:
+            Log.note("lid sleep was still off from last time")
+            if !LidSleep.setupDone || !LidSleep.keepAwakeWhenClosed(false) { notice = Self.manualFix }
         case .forget, .nothing: prefs.set(false, forKey: LidSleep.oursKey)
         }
         dropOldWatchdog()
@@ -63,11 +68,13 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
 
     func runRemote(_ url: String) {
         switch remoteCommand(url) {
-        case .on(let minutes)?: start(for: minutes.map { $0 * 60 })
+        case .on(let minutes)?: start(for: minutes.map { $0 * 60 }, why: "steamcup://on link")
         case .onWhile(let pid)?:
-            if on && until == nil && watched == nil { return }   // already on until turned off: a command ending must not turn it off
-            start(for: nil); watch(pid)
-        case .off?: stop()   // also drops a session paused by screen lock
+            if on && until == nil && watched == nil {   // already on until turned off: a command ending must not turn it off
+                return Log.note("already on: ignored steamcup run of \(processName(pid)) (pid \(pid))")
+            }
+            start(for: nil, why: "steamcup run of \(processName(pid)) (pid \(pid))"); watch(pid)
+        case .off?: stop(why: "steamcup://off link")   // also drops a session paused by screen lock
         case nil: break
         }
     }
@@ -81,10 +88,11 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         } else if (e?.clickCount ?? 1) <= 1 { toggle() }   // a double-click counts once, so it can't switch on and straight back off
     }
 
-    @objc func toggle() { on ? stop() : start(for: nil) }
-    @objc func startTimed(_ sender: NSMenuItem) { start(for: sender.tag == 0 ? nil : sender.tag) }
+    @objc func toggle() { on ? stop(why: "cup click, menu or ⌃⌥W") : start(for: nil, why: "cup click, menu or ⌃⌥W") }
+    @objc func startTimed(_ sender: NSMenuItem) { start(for: sender.tag == 0 ? nil : sender.tag, why: "menu") }
 
-    func start(for seconds: Int?) {
+    func start(for seconds: Int?, why: String) {
+        Log.note("on (\(why))" + (seconds.map { ", for \($0 / 60) min" } ?? ""))
         pausedByLock = nil
         unwatch()   // the newest request sets when it ends, as with timers
         notice = nil
@@ -105,17 +113,19 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
 
     // Stops when the process ends; checks once more after arming, in case it ended first.
     func watch(_ pid: pid_t) {
+        let name = processName(pid)   // looked up now: an ended process has no name
         let s = DispatchSource.makeProcessSource(identifier: pid, eventMask: .exit, queue: .main)
-        s.setEventHandler { [weak self] in self?.stop() }
+        s.setEventHandler { [weak self] in self?.stop(why: "\(name) finished") }
         s.resume()
         watched = (pid, s)
-        if kill(pid, 0) != 0 && errno == ESRCH { stop() }
+        if kill(pid, 0) != 0 && errno == ESRCH { stop(why: "\(name) had already finished") }
         refresh()
     }
 
     func unwatch() { watched?.exit.cancel(); watched = nil }
 
-    @objc func stop() {
+    func stop(why: String) {
+        if on { Log.note("off (\(why))") }
         pausedByLock = nil
         unwatch()
         duration = nil
@@ -133,7 +143,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         let b = Battery.read()
         if let why = lidSafety(thermal: ProcessInfo.processInfo.thermalState, onBattery: b.onBattery, percent: b.percent) {
             notice = "Lid-closed mode paused: \(why.rawValue)"
-            return
+            return Log.note("lid-closed mode not started: \(why.rawValue)")
         }
         lidActive = LidSleep.keepAwakeWhenClosed(true)
         if !lidActive { notice = "Lid-closed mode needs setup again" }
@@ -146,11 +156,16 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     }
 
     func tick() {
-        if !on { return stop() }   // only while retrying a failed lid switch-back
-        if let u = until, u <= Date() { return stop() }
+        if !on { return stop(why: "retrying the lid sleep switch-back") }   // only while retrying a failed lid switch-back
+        if let u = until, u <= Date() { return stop(why: "timer ended") }
+        if Date().timeIntervalSince(lastSample) >= 59 {   // ticks come every 15 s
+            lastSample = Date()
+            Log.sample(lidClosedMode: lidActive)
+        }
         if lidActive {
             let b = Battery.read()
             if let why = lidSafety(thermal: ProcessInfo.processInfo.thermalState, onBattery: b.onBattery, percent: b.percent) {
+                Log.note("stopping lid-closed mode: \(why.rawValue)")
                 endLidSession()
                 if !lidActive {
                     notice = notice ?? "Lid-closed mode paused: \(why.rawValue)"
@@ -176,7 +191,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     @objc func screenLocked() {
         guard sleepOnLock, on else { return }
         let p = (until, duration, watched?.pid)
-        stop()               // clears pausedByLock, so set it after
+        stop(why: "screen locked")   // clears pausedByLock, so set it after
         pausedByLock = p
     }
 
@@ -184,7 +199,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         guard let p = pausedByLock else { return }
         pausedByLock = nil
         guard !on, p.until.map({ $0 > Date() }) ?? true else { return }   // a timer that ran out while locked stays off
-        start(for: nil)
+        start(for: nil, why: "screen unlocked: resuming")
         duration = p.duration   // keep the original end time, not a fresh timer
         until = p.until
         if let pid = p.pid { watch(pid) }
@@ -248,7 +263,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         }
         Watchdog.install()
         // Ticking it means "keep my Mac running with the lid shut": turn on right away, not on the next cup click.
-        if !on { start(for: nil) } else if !lidActive { beginLidSession() }
+        if !on { start(for: nil, why: "lid-closed mode ticked") } else if !lidActive { beginLidSession() }
         refresh()
     }
 
@@ -266,10 +281,12 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         if let old = assertion {   // swap the assertion type in place, keeping the timer
             assertion = Assertion.hold(screenMayTurnOff: screenMayTurnOff)
             Assertion.release(old)
-            if !on { stop(); notice = "Couldn't keep the Mac awake" }
+            if !on { stop(why: "couldn't switch the screen setting"); notice = "Couldn't keep the Mac awake" }
         }
         refresh()
     }
+
+    @objc func showLog() { NSWorkspace.shared.open(Log.url) }   // opens in Console
 
     @objc func toggleSleepOnLock() { sleepOnLock.toggle(); if !sleepOnLock { pausedByLock = nil } }
 
@@ -339,6 +356,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         _ = add("Let the Screen Turn Off", #selector(toggleScreen), checked: screenMayTurnOff)
         _ = add("Sleep When Screen Locks", #selector(toggleSleepOnLock), checked: sleepOnLock)
         _ = add("Open at Login", #selector(toggleLogin), checked: SMAppService.mainApp.status == .enabled)
+        _ = add("Show Log", #selector(showLog))
         m.addItem(.separator())
 
         let quit = m.addItem(withTitle: "Quit Steamcup", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -367,7 +385,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         m.removeItem(at: m.numberOfItems - 1)   // and the separator above it
         return m
     }
-    func applicationWillTerminate(_ n: Notification) { stop() }
+    func applicationWillTerminate(_ n: Notification) { stop(why: "Steamcup quit") }
 
     // Global hotkey ⌃⌥W via Carbon (no Accessibility permission needed).
     func registerHotkey() {
@@ -391,7 +409,9 @@ if CommandLine.arguments.dropFirst().first == "--watchdog" {
         .contains { $0.processIdentifier != me }
     let ours = UserDefaults.standard.bool(forKey: LidSleep.oursKey)
     switch recoveryStep(ours: ours, sleepDisabled: ours && LidSleep.isOff, appRunning: running) {
-    case .switchBack: LidSleep.keepAwakeWhenClosed(false)
+    case .switchBack:
+        Log.note("background check: Steamcup is gone and left lid sleep off")
+        LidSleep.keepAwakeWhenClosed(false)
     case .forget: UserDefaults.standard.set(false, forKey: LidSleep.oursKey)
     case .nothing: break
     }
@@ -433,7 +453,7 @@ let app = App()
 let signals = [SIGTERM, SIGINT, SIGHUP].map { sig -> DispatchSourceSignal in
     signal(sig, SIG_IGN)
     let s = DispatchSource.makeSignalSource(signal: sig, queue: .main)
-    s.setEventHandler { app.stop(); exit(0) }
+    s.setEventHandler { app.stop(why: "Steamcup got signal \(sig)"); exit(0) }
     s.resume()
     return s
 }

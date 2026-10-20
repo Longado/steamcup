@@ -43,9 +43,14 @@ enum LidSleep {
         if on { prefs.set(true, forKey: oursKey) }   // before switching, so a crash right after still counts as ours
         let r = run("/usr/bin/sudo", ["-n", "/usr/bin/pmset", "-a", "disablesleep", on ? "1" : "0"])
         if !r.ok { NSLog("Steamcup: pmset disablesleep \(on ? 1 : 0) failed: \(r.out)") }
+        Log.note(r.ok ? "lid sleep switched \(on ? "off" : "back on")"
+                      : "couldn't switch lid sleep \(on ? "off" : "back on"): \(r.out.trimmingCharacters(in: .whitespacesAndNewlines))")
         if on != r.ok { prefs.set(false, forKey: oursKey) }   // switched back, or never got switched off; a failed switch-back stays ours
         // A Mac whose lid is already shut may not sleep just because lid sleep is back on, so ask for it.
-        if !on && r.ok && Lid.shutAndSleeps { _ = run("/usr/bin/pmset", ["sleepnow"]) }
+        if !on && r.ok && Lid.shutAndSleeps {
+            Log.note("the lid is shut: putting the Mac to sleep")
+            _ = run("/usr/bin/pmset", ["sleepnow"])
+        }
         return r.ok
     }
 
@@ -102,14 +107,14 @@ enum Watchdog {
 }
 
 enum Lid {
+    static var isShut: Bool { flag("AppleClamshellState") }
     // The lid is shut and that would normally sleep this Mac (false with an external display in clamshell mode).
-    static var shutAndSleeps: Bool {
+    static var shutAndSleeps: Bool { isShut && flag("AppleClamshellCausesSleep") }
+
+    private static func flag(_ key: String) -> Bool {
         let root = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
         defer { IOObjectRelease(root) }
-        func flag(_ key: String) -> Bool {
-            (IORegistryEntryCreateCFProperty(root, key as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue() as? Bool) ?? false
-        }
-        return flag("AppleClamshellState") && flag("AppleClamshellCausesSleep")
+        return (IORegistryEntryCreateCFProperty(root, key as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue() as? Bool) ?? false
     }
 }
 
@@ -124,5 +129,13 @@ enum Battery {
             return (d[kIOPSPowerSourceStateKey] as? String == kIOPSBatteryPowerValue, cur * 100 / max)
         }
         return (false, 100)
+    }
+
+    // The battery's own sensor in °C (AppleSmartBattery reports hundredths of a degree); nil on Macs without a battery.
+    static func celsius() -> Double? {
+        let s = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSmartBattery"))
+        guard s != 0 else { return nil }
+        defer { IOObjectRelease(s) }
+        return (IORegistryEntryCreateCFProperty(s, "Temperature" as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue() as? Int).map { Double($0) / 100 }
     }
 }

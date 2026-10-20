@@ -67,6 +67,7 @@ MacBook 合上盖子就会睡,不管哪个程序怎么要求。唯一的办法�
 - **谁能用这两条命令:** 以你的用户身份运行的任何程序,都能不输密码用这两条命令,不只是 Steamcup。
 - **只改自己关的:** Steamcup 会记下自己关过合盖睡眠,只改回它自己关的。你自己跑过 `sudo pmset -a disablesleep 1`,它不会动。
 - **发热和电量:** 合着盖子放在包里的 MacBook 会热。合盖模式开着时 Steamcup 每 15 秒查一次,macOS 报告严重过热或电量降到 10% 就停。还没在真机上看到它触发。
+- **日志:** Steamcup 开着时,每分钟往 `~/Library/Logs/Steamcup.log` 写一行:盖子开合、电量和电池温度、macOS 报告的发热级别。每次开关和原因、每次改合盖睡眠也记一笔。菜单里的 **Show Log** 能打开它。日志不离开你的 Mac。
 - **已经合着盖:** 合着盖时合盖睡眠被改回来(定时到点、过热、低电、崩溃),Steamcup 会用 `pmset sleepnow` 让 Mac 睡下;接着外接显示器用合盖模式时除外。合着盖定时到点时试过。
 - **崩溃或强制退出:** 勾上合盖模式会加一个后台检查,文件是 `~/Library/LaunchAgents/com.longado.steamcup.recovery.plist`。launchd 每分钟跑一次:Steamcup 不在了、合盖睡眠还关着,就改回来。Steamcup 卡死但没退出时它管不到。取消勾选合盖模式就会移除它。
 - **链接:** `steamcup://on` 链接能打开 Steamcup,勾了合盖模式就带合盖模式。浏览器打开这种链接前会先问你,过热和低电停止照样生效。
@@ -176,7 +177,7 @@ python3 icon/make_icon.py                    # 应用图标
 python3 icon/make_menubar.py                 # 菜单栏图标(关 / 开 / 合盖)
 ```
 
-`main.swift` 是菜单栏程序,`Power.swift` 管电源断言、合盖睡眠开关和电量读取,`Rules.swift` 放测试要检查的纯判断。
+`main.swift` 是菜单栏程序,`Power.swift` 管电源断言、合盖睡眠开关和电量读取,`Log.swift` 写日志,`Rules.swift` 放测试要检查的纯判断。
 
 ## 许可证
 
