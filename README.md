@@ -29,7 +29,7 @@ Most keep-awake apps stop at "don't idle-sleep", so the Mac still sleeps the mom
 
 ## What it is
 
-A native macOS menu bar app of about 600 lines of Swift, with no dependencies. Click the cup and your Mac stays awake: the cup fills and steams. Click again and it sleeps as usual. Right-click for timers and options.
+A native macOS menu bar app of about 700 lines of Swift, with no dependencies. Click the cup and your Mac stays awake: the cup fills and steams. Click again and it sleeps as usual. Right-click for timers and options.
 
 Closing the lid puts a MacBook to sleep whatever apps ask. The only way around that is a system-wide switch, `pmset disablesleep`, which needs admin rights. Steamcup flips that switch only while it is on. It flips it back when:
 - you turn it off, a timer ends, or you quit
