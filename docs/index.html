@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f0e6">
+  <title>Steamcup · 合上电脑，让任务接着跑</title>
+  <meta name="description" content="Steamcup 是免费的开源 macOS 菜单栏防睡眠工具。定时保持唤醒、合盖继续运行，也可以醒到一条命令结束。">
+  <meta property="og:title" content="Steamcup · 合上电脑，让任务接着跑">
+  <meta property="og:description" content="菜单栏里的一杯咖啡。为编译、渲染和长时间运行的任务，让 Mac 保持唤醒。">
+  <meta property="og:image" content="https://longado.github.io/steamcup/media/steamcup-icon.png">
+  <meta property="og:url" content="https://longado.github.io/steamcup/">
+  <link rel="icon" href="media/steamcup-icon.png">
+  <style>
+    :root{color-scheme:light;--paper:#f6f0e6;--ink:#38261d;--muted:#746358;--line:#d8caba;--accent:#76482b}
+    *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7}a{color:inherit;text-underline-offset:5px}a:focus-visible,summary:focus-visible,video:focus-visible{outline:3px solid var(--accent);outline-offset:5px}.wrap{max-width:1120px;margin:auto;padding:0 32px}header{display:flex;align-items:center;justify-content:space-between;padding:24px 0;border-bottom:1px solid var(--line);gap:20px}.brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-weight:700;font-size:21px;letter-spacing:-.5px}.brand img{width:38px;height:38px}nav{display:flex;gap:26px;font-size:14px}nav a{text-decoration:none}nav a:hover{text-decoration:underline}.hero{display:grid;grid-template-columns:1.35fr 1fr;align-items:center;gap:60px;padding:90px 0 72px}.eyebrow{font:12px ui-monospace,SFMono-Regular,monospace;letter-spacing:2px;color:var(--accent);text-transform:uppercase}.hero h1{font-size:clamp(38px,5.4vw,66px);line-height:1.18;letter-spacing:-2px;font-weight:650;margin:24px 0}.lead{max-width:520px;font-size:18px;color:var(--muted);margin:0 0 28px}.actions{display:flex;flex-wrap:wrap;align-items:center;gap:18px}.button{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:12px 23px;border-radius:9px;background:var(--ink);color:var(--paper);text-decoration:none;font-weight:600;font-size:15px;transition:background .15s}.button:hover{background:var(--accent)}.small{font-size:12px;color:var(--muted);margin:14px 0 0}.cup{width:100%;max-width:340px;display:block;margin:auto;image-rendering:pixelated}.cup-caption{text-align:center;font:12px ui-monospace,SFMono-Regular,monospace;letter-spacing:2px;color:var(--muted);margin-top:20px}.strip{display:flex;justify-content:space-between;gap:20px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:19px 0;font-size:13px;color:var(--muted)}section{padding:65px 0}h2{font-size:30px;line-height:1.35;letter-spacing:-.8px;margin:12px 0 25px}h3{font-size:18px;margin:0 0 12px}.video-shell{margin-top:28px;border-radius:14px;overflow:hidden;background:#201b17;border:1px solid var(--line)}video{display:block;width:100%;max-height:610px;object-fit:contain}.section-head{display:flex;align-items:end;justify-content:space-between;gap:25px}.section-head p{max-width:370px;color:var(--muted);font-size:14px}.features{display:grid;grid-template-columns:repeat(3,1fr);gap:36px;margin-top:38px}.feature{border-top:1px solid var(--line);padding-top:22px}.number{font:12px ui-monospace,SFMono-Regular,monospace;color:var(--accent);display:block;margin-bottom:18px}.feature p{color:var(--muted);font-size:15px;margin:0}.command{margin-top:32px;padding:23px 26px;background:#eae0d2;border-radius:10px;display:flex;justify-content:space-between;align-items:center;gap:20px}.command code{font:14px ui-monospace,SFMono-Regular,monospace;overflow-wrap:anywhere}.command span{font-size:13px;color:var(--muted)}.install{border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1.3fr;gap:70px}.steps{margin:0;padding-left:22px}.steps li{padding:0 0 20px 8px}.steps strong{display:block}.steps p{margin:3px 0 0;color:var(--muted);font-size:14px}.note{padding:20px 24px;border:1px solid var(--line);border-radius:10px;font-size:14px;color:var(--muted);margin-top:10px}.note p{margin:0 0 10px}.note p:last-child{margin:0}.faq{border-top:1px solid var(--line)}details{border-bottom:1px solid var(--line);padding:20px 0}summary{font-weight:600;cursor:pointer}details p{font-size:14px;color:var(--muted);max-width:850px;margin-bottom:0}footer{border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:26px 0 36px;font-size:12px;color:var(--muted)}footer div{display:flex;gap:22px}
+    @media(max-width:700px){.wrap{padding:0 22px}header{padding:18px 0}nav{gap:18px;font-size:13px}.hero{grid-template-columns:1fr;gap:34px;padding:48px 0}.hero h1{letter-spacing:-1px}.lead{font-size:16px}.cup{max-width:190px}.cup-caption{margin-top:12px}.strip{flex-wrap:wrap;justify-content:flex-start;gap:8px 22px}.section-head{display:block}.section-head p{max-width:none}.features{grid-template-columns:1fr;gap:26px}.feature{padding-top:16px}.number{margin-bottom:10px}.command{display:block;padding:20px}.command span{display:block;margin-top:12px}.install{grid-template-columns:1fr;gap:30px}section{padding:44px 0}h2{font-size:27px}footer{display:block}footer div{margin-top:12px}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.button{transition:none}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="brand" href="./"><img src="media/steamcup-icon.png" alt="" width="38" height="38">Steamcup</a>
+      <nav aria-label="主导航"><a href="#install">安装</a><a href="https://github.com/Longado/steamcup">GitHub ↗</a></nav>
+    </header>
+    <main>
+      <section class="hero" aria-labelledby="title">
+        <div>
+          <div class="eyebrow">A little coffee for your Mac.</div>
+          <h1 id="title">合上电脑，<br>让任务接着跑。</h1>
+          <p class="lead">菜单栏里的一只像素咖啡杯。编译、渲染、跑 Agent 时，让 Mac 保持唤醒；忙完了，再好好休息。</p>
+          <div class="actions"><a class="button" href="https://github.com/Longado/steamcup/releases/latest/download/Steamcup.zip">下载 Mac 版 ↓</a><a href="#demo">看 12 秒演示</a></div>
+          <p class="small">v1.3.2 Alpha · 免费开源 · macOS 14+<br>合盖模式首次开启需管理员授权。<a href="#install">首次安装说明</a></p>
+        </div>
+        <div><img class="cup" src="media/steamcup-icon.png" alt="冒着热气的像素咖啡杯" width="340" height="340"><div class="cup-caption">ONE CLICK. STAY AWAKE.</div></div>
+      </section>
+      <div class="strip"><span>原生 macOS 菜单栏应用</span><span>Apple 芯片 / Intel 通用包</span><span>MIT 开源 · 应用不联网</span></div>
+      <section id="demo" aria-labelledby="demo-title">
+        <div class="section-head"><div><div class="eyebrow">01 / In a nutshell</div><h2 id="demo-title">一杯咖啡，留给还没跑完的事。</h2></div><p>点一下杯子，开始保持唤醒。再点一下，恢复正常睡眠。定时、合盖和锁屏选项，都在右键菜单里。</p></div>
+        <div class="video-shell"><video controls playsinline preload="metadata" aria-label="Steamcup 12 秒功能示意短片"><source src="media/steamcup-intro.mp4" type="video/mp4">你的浏览器无法播放视频。<a href="media/steamcup-intro.mp4">下载短片</a></video></div>
+        <p class="small">功能示意短片。<a href="media/steamcup-explainer.mp4">查看 1 分半英文讲解 →</a></p>
+        <div class="features">
+          <article class="feature"><span class="number">01</span><h3>合盖继续运行</h3><p>开启合盖模式后，屏幕可以熄灭，后台任务继续。关闭 Steamcup 或定时结束后，恢复合盖睡眠。</p></article>
+          <article class="feature"><span class="number">02</span><h3>到点就休息</h3><p>选择 30 分钟到 8 小时的定时，菜单栏显示剩余时间。也可选择锁屏时暂停，解锁后继续。</p></article>
+          <article class="feature"><span class="number">03</span><h3>醒到命令跑完</h3><p>编译、转视频或运行脚本，让保持唤醒跟着任务走。命令结束后自动释放本次唤醒。</p></article>
+        </div>
+        <div class="command"><code>steamcup run -- &lt;你的命令&gt;</code><span><a href="https://github.com/Longado/steamcup/blob/main/README.zh-CN.md#命令行">先设置命令行入口 →</a></span></div>
+      </section>
+      <section class="install" id="install" aria-labelledby="install-title">
+        <div><div class="eyebrow">02 / Take a sip</div><h2 id="install-title">装好，就在菜单栏见。</h2><p class="lead">下载后安装到 Mac。网页提供介绍和下载，保持唤醒功能在本机运行。</p><a class="button" href="https://github.com/Longado/steamcup/releases/latest/download/Steamcup.zip">下载 Steamcup.zip ↓</a><p class="small"><a href="https://github.com/Longado/steamcup/releases">版本记录</a> · <a href="https://github.com/Longado/steamcup/blob/main/README.zh-CN.md">完整中文说明</a></p></div>
+        <div><ol class="steps"><li><strong>下载并解压</strong><p>将 Steamcup.app 拖进「应用程序」文件夹。</p></li><li><strong>打开 Steamcup</strong><p>点菜单栏里的杯子开启或关闭；右键打开定时和其他选项。快捷键：⌃⌥W。</p></li><li><strong>需要合盖时，开启合盖模式</strong><p>勾选 Keep Awake with Lid Closed。首次需要管理员密码，授权改变系统合盖睡眠设置，并安装后台恢复检查。</p></li></ol><div class="note"><p><strong>首次打开：</strong>当前版本尚未经过 Apple 公证，macOS 可能阻止打开。确认来源后，按<a href="https://github.com/Longado/steamcup/blob/main/README.zh-CN.md#快速开始">安装说明</a>在「系统设置 → 隐私与安全性」中处理。</p><p><strong>合盖运行时保持通风。</strong>程序设有过热和低电量停止机制，但还未在真实过热、低电场景下验证触发效果。</p></div></div>
+      </section>
+      <section class="faq" aria-labelledby="faq-title">
+        <div class="eyebrow">03 / Before you go</div><h2 id="faq-title">使用前，知道这几件事。</h2>
+        <details><summary>支持哪些 Mac？</summary><p>下载包面向 macOS 14 及以上，包含 Apple 芯片和 Intel 两种架构。目前真机验证来自 macOS 26 的 Apple 芯片 Mac；macOS 14–15 和 Intel 设备仍待实际验证。当前为 Alpha 版本。</p></details>
+        <details><summary>为什么合盖模式需要管理员权限？</summary><p>它会改变系统的合盖睡眠设置，并安装后台恢复检查。授权后，同一用户下的其他程序也能执行已授权的两条电源设置命令。你可以在开源仓库中查看脚本、权限范围和卸载方法。<a href="https://github.com/Longado/steamcup/blob/main/README.zh-CN.md#安全吗">了解权限与恢复机制 →</a></p></details>
+        <details><summary>如果退出或崩溃，会发生什么？</summary><p>正常关闭时会恢复由 Steamcup 更改的合盖睡眠设置。开启合盖模式后，后台检查每分钟运行一次，程序崩溃或强退后可恢复设置；后台检查也检查过热和低电量。正常退出、强退恢复及合盖定时到点已在作者设备上试过，完整限制见仓库说明。</p></details>
+        <details><summary>需要账号或订阅吗？</summary><p>不需要。Steamcup 免费、MIT 开源，应用不发送网络请求。运行日志只保存在你的 Mac 上。</p></details>
+      </section>
+    </main>
+    <footer><span>Steamcup · Made by Yutai Lin · MIT License</span><div><a href="https://github.com/Longado/steamcup">源码</a><a href="https://github.com/Longado/steamcup/issues">反馈问题</a><a href="https://github.com/Longado/steamcup/blob/main/README.md">English docs</a></div></footer>
+  </div>
+</body>
+</html>
